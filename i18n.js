@@ -120,8 +120,8 @@
 
     /* about */
     about_t: 'Over DynamFuel', about_l: 'DynamFuel is een gratis app van DynamVic Cycling coach. Je krijgt per geplande rit een voedingsplan dat steunt op wetenschappelijke richtlijnen. Elk getal heeft een bron of een regel van je coach.',
-    privacy_t: 'Privacy', privacy: 'Geen account, geen reclame, geen tracking. Alles wat je invult blijft op deze telefoon. De app praat alleen met Intervals.icu (met je eigen sleutel) en, als je een gemeente instelt, met Open-Meteo voor het weer – rechtstreeks vanaf je telefoon. Back-ups maak je zelf.',
-    sources_t: 'Gegevens en lettertypes', sources: 'Trainingen: Intervals.icu (met je eigen sleutel). Weersvoorspelling: Open-Meteo.com (CC BY 4.0). Lettertypes Poppins en Inter onder de SIL Open Font License. Productwaarden: etiketten en websites van de merken, gecontroleerd op de vermelde datum. Gewoon eten: NEVO (RIVM) en USDA FoodData Central.',
+    privacy_t: 'Privacy', privacy: 'Geen account, geen reclame, geen tracking. Alles wat je invult blijft op deze telefoon. De app praat alleen met Intervals.icu (met je eigen sleutel) en, als je een gemeente instelt, met Open-Meteo voor het weer en, als je een streepjescode opzoekt, met Open Food Facts (alleen die code) – rechtstreeks vanaf je telefoon. Back-ups maak je zelf.',
+    sources_t: 'Gegevens en lettertypes', sources: 'Trainingen: Intervals.icu (met je eigen sleutel). Weersvoorspelling: Open-Meteo.com (CC BY 4.0). Lettertypes Poppins en Inter onder de SIL Open Font License. Productwaarden: etiketten en websites van de merken, gecontroleerd op de vermelde datum. Gewoon eten: NEVO (RIVM) en USDA FoodData Central. Eigen producten: Open Food Facts (ODbL, openfoodfacts.org), nagekeken door de atleet.',
     lock_t: 'DynamFuel', lock_l: 'Deze app is nog niet geactiveerd op deze telefoon.'
   };
 
@@ -230,8 +230,8 @@
     upd_new: 'New version available.', upd_done: 'DynamFuel was updated to version {v}.', upd_reload: 'Reload',
 
     about_t: 'About DynamFuel', about_l: 'DynamFuel is a free app by DynamVic Cycling coach. For every planned ride you get a fueling plan based on scientific guidelines. Every number has a source or a rule from your coach.',
-    privacy_t: 'Privacy', privacy: 'No account, no ads, no tracking. Everything you enter stays on this phone. The app only talks to Intervals.icu (with your own key) and, if you set a town, to Open-Meteo for the weather – straight from your phone. You make back-ups yourself.',
-    sources_t: 'Data and fonts', sources: 'Workouts: Intervals.icu (with your own key). Weather forecast: Open-Meteo.com (CC BY 4.0). Fonts Poppins and Inter under the SIL Open Font License. Product values: labels and brand websites, checked on the date shown. Real food: NEVO (RIVM) and USDA FoodData Central.',
+    privacy_t: 'Privacy', privacy: 'No account, no ads, no tracking. Everything you enter stays on this phone. The app only talks to Intervals.icu (with your own key) and, if you set a town, to Open-Meteo for the weather and, when you look up a barcode, to Open Food Facts (only that code) – straight from your phone. You make back-ups yourself.',
+    sources_t: 'Data and fonts', sources: 'Workouts: Intervals.icu (with your own key). Weather forecast: Open-Meteo.com (CC BY 4.0). Fonts Poppins and Inter under the SIL Open Font License. Product values: labels and brand websites, checked on the date shown. Real food: NEVO (RIVM) and USDA FoodData Central. Own products: Open Food Facts (ODbL, openfoodfacts.org), checked by the athlete.',
     lock_t: 'DynamFuel', lock_l: 'This app is not activated on this phone yet.'
   };
 
@@ -382,6 +382,33 @@
     food_serving: '1 piece = {g} g', food_need_g: 'Enter the weight (g): without it this is not used in your pack list.', food_src: 'Source of the values',
     card_share: 'Share as image', card_sticker: 'Print sticker', card_saved: 'Image saved.',
     card_foot: 'DynamFuel gives general guidelines, not medical advice. Never drink more than you sweat.'
+  });  Object.assign(nl, {
+    own_add: 'Eigen product toevoegen', own_t: 'Eigen producten', own_edit: 'Eigen product', own_edit_s: 'Wijzigen', own_del: 'Product verwijderen',
+    own_bar: 'Streepjescode', own_bar_l: 'Typ de cijfers onder de streepjescode (of scan ze). De waarden komen van Open Food Facts en moet je zelf nakijken op het etiket.',
+    own_code: 'Streepjescode (8–14 cijfers)', own_scan: 'Scannen', own_off_attr: 'Productgegevens: Open Food Facts (ODbL). Alleen de streepjescode wordt verstuurd.',
+    own_code_bad: 'Een streepjescode heeft 8 tot 14 cijfers.', own_notfound: 'Niet gevonden in Open Food Facts: vul de waarden zelf in van het etiket.',
+    own_found: 'Gevonden: {name}. Kijk elke waarde na op het etiket.', own_off_err: 'Open Food Facts is niet bereikbaar (offline?). Vul de waarden zelf in.',
+    own_scan_none: 'Geen streepjescode gezien: typ de cijfers.', own_scan_err: 'De camera kon niet starten: typ de cijfers.',
+    own_name: 'Naam', own_brand: 'Merk', own_cat: 'Soort', own_serving: 'Eén portie (1 gel, 1 reep, 1 dosis poeder…)', own_from_off: 'Waarden per portie berekend uit Open Food Facts (per 100 g/ml) – nakijken.',
+    own_water: 'Water per dosis', own_powder: 'Poeder per dosis', own_per: 'Per portie (van het etiket)', own_sugars: 'waarvan suikers', own_salt: 'Of: zout',
+    own_kcal: 'Energie', own_protein: 'Eiwit', own_fat: 'Vet', own_fibre: 'Vezel',
+    own_mtc: 'Bevat het fructose of suiker naast glucose/maltodextrine?', own_mtc_l: 'Kijk bij de ingrediënten. "Weet ik niet" telt als alleen glucose (de veilige kant).',
+    own_allerg: 'Bevat (allergenen)', own_traces: 'Kan sporen bevatten van', own_check: 'Ik heb elke waarde nagekeken op het etiket.',
+    own_need_check: 'Kijk de waarden na op het etiket en vink het vakje aan.', own_need: 'Vul minstens naam, portie en koolhydraten in (en het water per dosis voor drank).'
+  });
+  Object.assign(en, {
+    own_add: 'Add your own product', own_t: 'Own products', own_edit: 'Own product', own_edit_s: 'Edit', own_del: 'Delete product',
+    own_bar: 'Barcode', own_bar_l: 'Type the digits under the barcode (or scan it). The values come from Open Food Facts and you must check them on the label.',
+    own_code: 'Barcode (8–14 digits)', own_scan: 'Scan', own_off_attr: 'Product data: Open Food Facts (ODbL). Only the barcode is sent.',
+    own_code_bad: 'A barcode has 8 to 14 digits.', own_notfound: 'Not found in Open Food Facts: enter the values from the label yourself.',
+    own_found: 'Found: {name}. Check every value on the label.', own_off_err: 'Open Food Facts cannot be reached (offline?). Enter the values yourself.',
+    own_scan_none: 'No barcode seen: type the digits.', own_scan_err: 'The camera could not start: type the digits.',
+    own_name: 'Name', own_brand: 'Brand', own_cat: 'Type', own_serving: 'One serving (1 gel, 1 bar, 1 dose of powder…)', own_from_off: 'Values per serving calculated from Open Food Facts (per 100 g/ml) – check them.',
+    own_water: 'Water per dose', own_powder: 'Powder per dose', own_per: 'Per serving (from the label)', own_sugars: 'of which sugars', own_salt: 'Or: salt',
+    own_kcal: 'Energy', own_protein: 'Protein', own_fat: 'Fat', own_fibre: 'Fibre',
+    own_mtc: 'Does it contain fructose or sugar besides glucose/maltodextrin?', own_mtc_l: 'Look at the ingredients. "Don\'t know" counts as glucose only (the safe side).',
+    own_allerg: 'Contains (allergens)', own_traces: 'May contain traces of', own_check: 'I have checked every value on the label.',
+    own_need_check: 'Check the values on the label and tick the box.', own_need: 'Enter at least name, serving and carbohydrate (and the water per dose for a drink).'
   });  Object.assign(rnl, {
     'MATCH-01': 'Hele porties uit je voorraad, binnen {choTolPct} % van je doel, met hoogstens {maxDistinct} soorten producten naast drank (regel van je coach).',
     'MATCH-02': 'Bij gelijke keuze: eerst binnen {closeTolPct} % van het doel, dan zo weinig mogelijk producten, dan je favorieten.',

@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.3.4';
+const APP_VERSION = '0.3.5';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -468,7 +468,8 @@ function postLines(p) {
 const CATS = [['gel', 'cat_gel'], ['chew', 'cat_chew'], ['bar', 'cat_bar'], ['drink', 'cat_drink'], ['electrolyte', 'cat_el'], ['food', 'cat_food']];
 /* products from the spreadsheet + real food (food.json) with the athlete's weights */
 const foodById = id => DATA.food && DATA.food.items.find(f => f.id === id);
-const libItems = () => (DATA.library ? DATA.library.items : []).concat(DATA.caffeine ? DATA.caffeine.items : []).concat(DATA.food ? DATA.food.items.map(f => DFFood.toItem(f, (STOCK.get(f.id) || {}).grams, lang())) : []);
+const ownItems = () => [...STOCK.values()].filter(s => s.own).map(s => Object.assign({ id: s.id, own: true }, s.own));
+const libItems = () => (DATA.library ? DATA.library.items : []).concat(DATA.caffeine ? DATA.caffeine.items : [], ownItems()).concat(DATA.food ? DATA.food.items.map(f => DFFood.toItem(f, (STOCK.get(f.id) || {}).grams, lang())) : []);
 const itemById = id => libItems().find(x => x.id === id);
 const itemName = id => { const it = itemById(id); return it ? `${it.brand} ${it.name}`.trim() : id; };
 const stockList = () => [...STOCK.values()].filter(s => s.qty > 0 && !s.hidden && itemById(s.id)).map(s => ({ id: s.id, qty: s.qty, fav: !!s.fav }));
@@ -488,7 +489,7 @@ function itemRow(it) {
     <div class="row between"><div class="row stepper"><button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="-1" aria-label="${t('stock_less')}"${s.qty > 0 ? '' : ' disabled'}>−</button>
       <input type="text" inputmode="numeric" class="qty" data-sqid="${esc(it.id)}" value="${s.qty || 0}" aria-label="${esc(it.brand + ' ' + it.name)}">
       <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}">+</button><span class="muted small">${it.food ? esc((foodById(it.id).unit || {})[lang()] || '') : t('u_' + it.category)}</span></div>
-      <button class="linkbtn" data-act="shide" data-id="${esc(it.id)}">${s.hidden ? t('stock_unhide') : t('stock_hide')}</button></div></div>`;
+      <span class="row">${it.own ? `<a class="linkbtn" href="#own/${encodeURIComponent(it.id)}">${t('own_edit_s')}</a>` : ''}<button class="linkbtn" data-act="shide" data-id="${esc(it.id)}">${s.hidden ? t('stock_unhide') : t('stock_hide')}</button></span></div></div>`;
 }
 /* real food: weight per part (the source weight is prefilled where one exists) + where the values come from */
 function foodWeights(it) {
@@ -501,9 +502,12 @@ function vStock() {
   const f = UI.stockFilter || 'all', items = libItems();
   const st = id => STOCK.get(id) || {};
   let h = topbar(t('stock_t')) + `<p class="small muted">${t('stock_l')}</p>` + chips('stockFilter', [['all', t('stock_all')], ['in', t('stock_in')]], f, 's', 'sfilter');
-  let any = false;
+  h += `<a class="btn wide" href="#own">${IC.plus}${t('own_add')}</a>`;
+  const own = items.filter(it => it.own && !st(it.id).hidden && (f === 'all' || st(it.id).qty > 0));
+  if (own.length) h += `<h2 class="dayh">${t('own_t')}</h2>` + own.map(itemRow).join('');
+  let any = own.length > 0;
   CATS.forEach(([cat, key]) => {
-    const list = items.filter(it => it.category === cat && !st(it.id).hidden && (f === 'all' || st(it.id).qty > 0));
+    const list = items.filter(it => it.category === cat && !it.own && !st(it.id).hidden && (f === 'all' || st(it.id).qty > 0));
     if (!list.length) return; any = true;
     h += `<h2 class="dayh">${t(key)}</h2>` + list.map(itemRow).join('');
   });
@@ -516,6 +520,95 @@ async function saveStock(id, patch) {
   const s = Object.assign({ id, qty: 0, fav: false, hidden: false }, STOCK.get(id) || {}, patch);
   s.qty = Math.max(0, Math.min(999, Math.round(+s.qty || 0)));
   STOCK.set(id, s); await DB.put('items', s);
+}
+
+/* ---------- own products + Open Food Facts barcode lookup (P3-5) ---------- */
+const OWN_NUM = { amount: [0.1, 2000], choG: [0, 200], sugarsG: [0, 200], sodiumMg: [0, 5000], saltG: [0, 12.5], caffeineMg: [0, 400], kcal: [0, 2000],
+  proteinG: [0, 200], fatG: [0, 200], fibreG: [0, 100], waterMl: [50, 2000], powderG: [0, 500] };
+const PER_SERVING = ['choG', 'sugarsG', 'sodiumMg', 'caffeineMg', 'kcal', 'proteinG', 'fatG', 'fibreG'];
+function ownDraft(id) {
+  const s = id && STOCK.get(id), o = s && s.own;
+  if (o) return Object.assign({ id, unit: o.serving.unit, amount: o.serving.amount, code: o.offCode || '', per100: null, labelChecked: false }, o);
+  return { id: null, brand: '', name: '', category: 'gel', unit: 'g', amount: null, choG: null, sugarsG: null, sodiumMg: null, caffeineMg: null, kcal: null, proteinG: null,
+    fatG: null, fibreG: null, mtc: null, waterMl: null, powderG: null, allergens: [], traces: [], labelChecked: false, code: '', offCode: null, per100: null };
+}
+function vOwn(id) {
+  const D = UI.own && UI.own.id === (id || null) ? UI.own : (UI.own = ownDraft(id));
+  const u = D.unit, nf = (f, label, unit) => `<div class="fld"><label class="lbl" for="o-${f}">${label}</label><span class="tin"><input id="o-${f}" type="text" inputmode="decimal" data-own="${f}" value="${esc(ns(D[f]))}"><span>${unit}</span></span><span class="err">${UI.err['own_' + f] || ''}</span></div>`;
+  const scan = 'BarcodeDetector' in window && navigator.mediaDevices ? `<button class="btn" data-act="offscan">${t('own_scan')}</button>` : '';
+  return `${topbar(id ? t('own_edit') : t('own_add'), '#stock')}
+    <section class="card"><h2>${t('own_bar')}</h2><p class="small muted">${t('own_bar_l')}</p>
+      <div class="row nowrap"><input id="offcode" class="grow wxq" type="text" inputmode="numeric" autocomplete="off" placeholder="${t('own_code')}" aria-label="${t('own_code')}" value="${esc(D.code || '')}">
+        <button class="btn" data-act="offsearch">${t('wx_search')}</button>${scan}</div>
+      <p class="msg${UI.offBad ? ' bad' : ''}" role="status">${esc(UI.offMsg || '')}</p><video id="offvideo" playsinline muted hidden style="width:100%;border-radius:12px"></video>
+      <small class="muted">${t('own_off_attr')}</small></section>
+    <section class="card">
+      <div class="fld"><label class="lbl" for="o-name">${t('own_name')}</label><input id="o-name" type="text" data-own="name" value="${esc(D.name)}" maxlength="80"></div>
+      <div class="fld"><label class="lbl" for="o-brand">${t('own_brand')} (${t('optional')})</label><input id="o-brand" type="text" data-own="brand" value="${esc(D.brand)}" maxlength="40"></div>
+      <div class="fld"><span class="lbl">${t('own_cat')}</span>${chips('category', DFOff.CATS.map(c => [c, t({ gel: 'cat_gel', bar: 'cat_bar', chew: 'cat_chew', drink: 'cat_drink', electrolyte: 'cat_el', food: 'cat_food' }[c])]), D.category, 's', 'ownset')}</div>
+      <div class="fld"><span class="lbl">${t('own_serving')}</span><div class="row"><span class="tin"><input type="text" inputmode="decimal" data-own="amount" value="${esc(ns(D.amount))}" aria-label="${t('own_serving')}"><span>${u}</span></span>${chips('unit', [['g', 'g'], ['ml', 'ml']], u, 's', 'ownset')}</div>
+        ${D.per100 ? `<small class="muted">${t('own_from_off')}</small>` : ''}<span class="err">${UI.err.own_amount || ''}</span></div>
+      ${['drink', 'electrolyte'].includes(D.category) ? nf('waterMl', t('own_water'), 'ml') + nf('powderG', t('own_powder') + ` (${t('optional')})`, 'g') : ''}
+      <h3>${t('own_per')}</h3>
+      ${nf('choG', t('cho'), 'g')}${nf('sugarsG', t('own_sugars'), 'g')}${nf('sodiumMg', t('sodium'), 'mg')}${D.sodiumMg == null ? nf('saltG', t('own_salt'), 'g') : ''}
+      ${nf('caffeineMg', t('caffeine_t'), 'mg')}${nf('kcal', t('own_kcal'), 'kcal')}${nf('proteinG', t('own_protein'), 'g')}${nf('fatG', t('own_fat'), 'g')}${nf('fibreG', t('own_fibre'), 'g')}
+      <div class="fld"><span class="lbl">${t('own_mtc')}</span>${chips('mtc', [[true, t('yes')], [null, t('unknown')]], D.mtc, 'm', 'ownset')}<small class="muted">${t('own_mtc_l')}</small></div>
+      <div class="fld"><span class="lbl">${t('own_allerg')}</span><div class="chips" role="group">${DFBackup.EU14.map(a => `<button type="button" class="chip" data-act="owntog" data-f="allergens" data-v="${a}" aria-pressed="${D.allergens.includes(a)}">${t('a_' + a)}</button>`).join('')}</div></div>
+      <div class="fld"><span class="lbl">${t('own_traces')}</span><div class="chips" role="group">${DFBackup.EU14.map(a => `<button type="button" class="chip" data-act="owntog" data-f="traces" data-v="${a}" aria-pressed="${D.traces.includes(a)}">${t('a_' + a)}</button>`).join('')}</div></div>
+      <label class="check"><input type="checkbox" data-own="labelChecked"${D.labelChecked ? ' checked' : ''}><span>${t('own_check')}</span></label>
+      <p class="err" role="alert">${UI.ownErr || ''}</p>
+      <button class="btn primary big wide" data-act="ownsave">${t('save')}</button>
+      ${id ? `<button class="btn danger wide" data-act="owndel">${t('own_del')}</button>` : ''}</section>`;
+}
+/* Open Food Facts values per 100 → per serving (only when the athlete has not typed that value) */
+function ownApplyPer100(D) {
+  if (!D.per100 || !(D.amount > 0)) return;
+  const ps = DFOff.perServing(D.per100, D.amount);
+  PER_SERVING.forEach(k => { if (!(D.typed || {})[k] && ps[k] != null) D[k] = ps[k]; });
+}
+async function offLookup(code) {
+  const D = UI.own; code = String(code || '').trim(); D.code = code;
+  if (!DFOff.validCode(code)) { UI.offMsg = t('own_code_bad'); UI.offBad = true; return rerender(); }
+  UI.offMsg = t('loading'); UI.offBad = false; rerender();
+  try {
+    const res = await fetch(DFOff.url(code)); if (!res.ok) throw 0;
+    const p = DFOff.parse(await res.json(), lang());
+    if (!p.found) { UI.offMsg = t('own_notfound'); UI.offBad = true; return rerender(); }
+    Object.assign(D, { name: D.name || p.name, brand: D.brand || p.brand, per100: p.per100, offCode: p.code || code, sodiumBasis: p.sodiumBasis,
+      allergens: [...new Set(D.allergens.concat(p.allergens))], traces: [...new Set(D.traces.concat(p.traces))], typed: {} });
+    if (!(D.amount > 0) && p.servingG > 0) D.amount = p.servingG;
+    ownApplyPer100(D);
+    UI.offMsg = t('own_found', { name: p.name || code }); UI.offBad = false;
+  } catch (e) { UI.offMsg = t('own_off_err'); UI.offBad = true; }
+  rerender();
+}
+async function offScan() {
+  const v = $('#offvideo'); if (!v) return;
+  let stream;
+  try {
+    const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    v.srcObject = stream; v.hidden = false; await v.play();
+    const t0 = Date.now();
+    while (Date.now() - t0 < 20000) {
+      const codes = await det.detect(v).catch(() => []);
+      if (codes.length) { stream.getTracks().forEach(x => x.stop()); v.hidden = true; return offLookup(codes[0].rawValue); }
+      await new Promise(r => setTimeout(r, 300));
+    }
+    UI.offMsg = t('own_scan_none'); UI.offBad = true;
+  } catch (e) { UI.offMsg = t('own_scan_err'); UI.offBad = true; }
+  if (stream) stream.getTracks().forEach(x => x.stop());
+  rerender();
+}
+async function ownSave() {
+  const D = UI.own;
+  const o = DFOff.checkOwn({ brand: D.brand, name: D.name, category: D.category, serving: { amount: D.amount, unit: D.unit }, choG: D.choG, sugarsG: D.sugarsG,
+    sodiumMg: D.sodiumMg, sodiumBasis: D.sodiumBasis, caffeineMg: D.caffeineMg, kcal: D.kcal, proteinG: D.proteinG, fatG: D.fatG, fibreG: D.fibreG, mtc: D.mtc,
+    waterMl: D.waterMl, powderG: D.powderG, allergens: D.allergens, traces: D.traces, labelChecked: D.labelChecked, offCode: D.offCode });
+  if (!o) { UI.ownErr = !D.labelChecked ? t('own_need_check') : t('own_need'); return rerender(); }
+  const id = D.id || 'own-' + Date.now().toString(36);
+  await saveStock(id, { own: o });
+  UI.own = null; UI.ownErr = ''; UI.offMsg = ''; location.hash = '#stock';
 }
 
 /* the pack list as plain text lines (also used by the fuel card and sticker) */
@@ -596,7 +689,7 @@ function vAbout() {
 }
 
 /* ---------- router ---------- */
-const VIEWS = { welcome: vWizard, rides: vRides, ride: vRide, add: vAdd, stock: vStock, profile: vProfile, settings: vSettings, about: vAbout };
+const VIEWS = { welcome: vWizard, rides: vRides, ride: vRide, add: vAdd, stock: vStock, own: vOwn, profile: vProfile, settings: vSettings, about: vAbout };
 function route() {
   const v = $('#view'), tabs = $('nav.tabs');
   document.documentElement.lang = lang();
@@ -608,13 +701,13 @@ function route() {
   else if (h === 'welcome') h = 'rides';
   v.innerHTML = (VIEWS[h] || vRides)(arg);
   tabs.hidden = !SET.onboarded; v.classList.toggle('notabs', !SET.onboarded);
-  const tab = h === 'ride' || h === 'add' ? 'rides' : h;   // stock has its own tab
+  const tab = h === 'ride' || h === 'add' ? 'rides' : h === 'own' ? 'stock' : h;   // stock has its own tab
   document.querySelectorAll('nav.tabs a').forEach(a => a.toggleAttribute('aria-current', a.dataset.tab === tab));
   document.querySelectorAll('nav.tabs [data-l]').forEach(s => { s.textContent = t(s.dataset.l); });
 }
 function rerender() { const y = scrollY; route(); scrollTo(0, y); }
 document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'cond') UI.condOpen = ev.target.open; }, true);
-addEventListener('hashchange', () => { UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
+addEventListener('hashchange', () => { UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (!/^#own/.test(location.hash)) { UI.own = null; UI.ownErr = ''; UI.offMsg = ''; } if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
 
 /* ---------- sheet, toast, update banner ---------- */
 function sheet(html) {
@@ -703,6 +796,19 @@ document.addEventListener('change', async ev => {
   if (el.dataset.icu) { ICU[el.dataset.icu] = el.value.trim(); saveIcu(); if (!UI.wz) toast(t('icu_saved_key')); return; }
   if (el.dataset.set) { SET[el.dataset.set] = BK.isHHMM(el.value) ? el.value : null; saveSet(); toast(t('saved')); return; }
   if (el.dataset.add) { UI.add[el.dataset.add] = el.value; return; }
+  if (el.dataset.own && UI.own) {
+    const D = UI.own, f = el.dataset.own;
+    if (f === 'labelChecked') { D.labelChecked = el.checked; return; }
+    if (f === 'name' || f === 'brand') { D[f] = el.value.trim(); return; }
+    const s = String(el.value).trim().replace(',', '.'), x = +s, rg = OWN_NUM[f];
+    if (s === '') { D[f] = null; delete UI.err['own_' + f]; }
+    else if (!isFinite(x) || x < rg[0] || x > rg[1]) { UI.err['own_' + f] = t('err_range', { lo: ns(rg[0]), hi: ns(rg[1]) }); return rerender(); }
+    else { D[f] = Math.round(x * 10) / 10; delete UI.err['own_' + f]; }
+    if (f === 'saltG') { D.sodiumMg = D.saltG == null ? null : Math.round(D.saltG / 2.5 * 1000); D.sodiumBasis = 'calc from salt (own label)'; }
+    if (PER_SERVING.includes(f)) D.typed = Object.assign({}, D.typed, { [f]: true });
+    if (f === 'amount') ownApplyPer100(D);
+    return rerender();
+  }
   if (el.dataset.gid) {
     const id = el.dataset.gid, i = +el.dataset.gi, f = foodById(id); if (!f) return;
     const s = String(el.value).trim().replace(',', '.'), x = +s, g = (STOCK.get(id) || {}).grams ? STOCK.get(id).grams.slice() : f.parts.map(() => null);
@@ -773,6 +879,13 @@ document.addEventListener('click', async ev => {
   if (a === 'wxclear') { delete SET.location; saveSet(); return rerender(); }
   if (a === 'card' && UI.fuel) { const r = await DFCard.share(UI.fuel); if (r === 'saved') toast(t('card_saved')); return; }
   if (a === 'sticker' && UI.fuel) return DFCard.print(UI.fuel, esc);
+  if (a === 'ownset' && UI.own) { const v = el.dataset.v; UI.own[el.dataset.f] = el.dataset.t === 'm' ? (v === 'true' ? true : null) : v; return rerender(); }
+  if (a === 'owntog' && UI.own) { const f = el.dataset.f, v = el.dataset.v, L = UI.own[f]; UI.own[f] = L.includes(v) ? L.filter(x => x !== v) : L.concat(v); return rerender(); }
+  if (a === 'offsearch' && UI.own) return offLookup($('#offcode').value);
+  if (a === 'offscan' && UI.own) return offScan();
+  if (a === 'ownsave' && UI.own) return ownSave();
+  if (a === 'owndel' && UI.own && UI.own.id) return sheet(`<h2>${t('own_del')}</h2><p>${esc(UI.own.name)}</p><button class="btn danger big wide" data-act="owndelgo">${t('own_del')}</button>`);
+  if (a === 'owndelgo' && UI.own && UI.own.id) { const id = UI.own.id; STOCK.delete(id); await DB.del('items', id); closeSheet(); UI.own = null; location.hash = '#stock'; return; }
   if (a === 'bk' || a === 'bkkey') return doBackup(a === 'bkkey');
   if (a === 'rsgo') return doRestore();
   if (a === 'erase') return sheet(`<h2>${t('erase_sure')}</h2><p>${t('erase_l')}</p><button class="btn danger big wide" data-act="erasego">${t('erase_go')}</button>`);

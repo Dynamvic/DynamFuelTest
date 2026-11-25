@@ -29,7 +29,7 @@
     deepStrictEqual: (a, b, m) => { if (!same(a, b)) fail(m || 'not deep-equal', a, b); },
     throws: (fn, m) => { try { fn(); } catch (e) { return; } fail(m || 'expected an error'); }
   };
-  const mods = { 'fmt.js': 'DFFmt', 'workout.js': 'DFWorkout', 'engine.js': 'DFEngine', 'match.js': 'DFMatch', 'rides.js': 'DFRides', 'backup.js': 'DFBackup', 'i18n.js': 'DFI18N', 'weather.js': 'DFWeather' };
+  const mods = { 'fmt.js': 'DFFmt', 'workout.js': 'DFWorkout', 'engine.js': 'DFEngine', 'match.js': 'DFMatch', 'rides.js': 'DFRides', 'backup.js': 'DFBackup', 'i18n.js': 'DFI18N', 'weather.js': 'DFWeather', 'food.js': 'DFFood', 'off.js': 'DFOff' };
   const list = [];
   root.DFTest = {
     list,

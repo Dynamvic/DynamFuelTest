@@ -5,9 +5,8 @@
    - Restore checks every field: a damaged value is replaced by an empty/default one and counted ("fixed"), so a damaged
      file never breaks the app. Older schemas are upgraded with MIGRATIONS[n] (schema n → n+1). */
 (function (root, factory) {
-  const m = factory();
-  if (typeof module === 'object' && module.exports) module.exports = m; else root.DFBackup = m;
-})(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./off.js')); else root.DFBackup = factory(root.DFOff);
+})(typeof self !== 'undefined' ? self : this, function (OFF) {
   const SCHEMA = 1;
   const EU14 = ['gluten', 'crustaceans', 'eggs', 'fish', 'peanuts', 'soy', 'milk', 'nuts', 'celery', 'mustard', 'sesame', 'sulphites', 'lupin', 'molluscs'];
   const HEALTH = ['diabetes', 'gi', 'pregnancy', 'eating'];
@@ -93,7 +92,12 @@
   function checkStock(s) {
     if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(s.id)) return null;
     if (!(Number.isInteger(s.qty) && s.qty >= 0 && s.qty <= 999)) return null;
-    return { id: s.id, qty: s.qty, fav: s.fav === true, hidden: s.hidden === true };
+    const o = { id: s.id, qty: s.qty, fav: s.fav === true, hidden: s.hidden === true };
+    // own product (P3-5): id own-…, the product itself checked like the form does
+    if (s.id.startsWith('own-') || s.own != null) { const own = OFF && OFF.checkOwn(s.own); if (!own || !/^own-[a-z0-9]+$/.test(s.id)) return null; o.own = own; }
+    // real food: the athlete's weight per part in g (null = not entered)
+    if (s.grams != null) { if (!Array.isArray(s.grams) || s.grams.length > 5 || !s.grams.every(g => g === null || (typeof g === 'number' && g > 0 && g <= 1000))) return null; o.grams = s.grams.slice(); }
+    return o;
   }
 
   function make(data, at) {
