@@ -112,16 +112,26 @@
       if (choHi - dCho < -1e-9 && choT > 0) { consider({ drink: opt.drink, k: opt.k, ml, cho: dCho, gOnly: dG, list: [], count: opt.k, ids: idsKey(opt, []) }); if (resHi < -1e-9) continue; }
       // DFS over solids (sorted by id): at most maxDistinct types, total ≤ gut tolerance
       const pick = [];
+      const strongThis = opt.drink && opt.drink.choPerMl * 1000 > R['MATCH-03'].maxGperL + 1e-9 ? 1 : 0;
       const dfs = (i, cho, gOnly, count) => {
         consider({ drink: opt.drink, k: opt.k, ml, cho: dCho + cho, gOnly: dG + gOnly, list: pick.map(p => ({ ...p })), count: opt.k + count, ids: idsKey(opt, pick) });
         if (choT <= 0 || pick.length >= maxDistinct) return;
+        // speed (polish B5), results unchanged: (1) above the ±10 % band more items only move further from the target;
+        // (2) once this plan type has a plan that fits, is close and respects the glucose limit, a branch that already needs
+        //     as many items or more can only end with more items, so it can never rank higher
+        const fast = !ctx.exhaustive;                      // ctx.exhaustive: tests compare with the full search
+        if (fast && dCho + cho > choHi + 1e-9) return;
+        const perfect = () => { const cat = opt.drink ? bestMix : bestSolid; return cat && cat.key[0] === 0 && cat.key[1] === 0 && cat.key[3] === 0 && cat.key[2] <= strongThis ? cat.key[4] : Infinity; };
+        if (fast && perfect() <= opt.k + count) return;
         for (let j = i; j < solids.length; j++) {
           const s = solids[j], c = s.it.choG;
           const maxN = Math.min(s.qty, Math.floor((resHi - cho) / c + 1e-9));
           for (let n = 1; n <= maxN; n++) {
+            if (fast && opt.k + count + n > perfect()) break;   // more items than a perfect plan of this type: can never rank higher
             pick.push({ id: s.it.id, n, cho: n * c });
             dfs(j + 1, cho + n * c, gOnly + (s.it.mtc === true ? 0 : n * c), count + n);
             pick.pop();
+            if (fast && dCho + cho + n * c > choHi + 1e-9) break;   // the first count above the band was tried; more of the same is further away
           }
         }
       };

@@ -18,7 +18,7 @@
     assert.equal(r.id, 'icu-1'); assert.equal(r.date, '2026-12-01'); assert.equal(r.time, '09:00'); assert.equal(r.goalTag, 'race');
     assert.ok(r.structured); assert.equal(r.durationS, 18000); assert.equal(r.indoor, null);
     assert.equal(R.eventToRide(ev({ type: 'VirtualRide' })).indoor, true, 'VirtualRide = indoor');
-    assert.equal(R.eventToRide(ev({ indoor: false })).indoor, false);
+    assert.equal(R.eventToRide(ev({ indoor: false })).indoor, null, 'false is the Intervals.icu default: ask');
     const u = R.eventToRide(ev({ start_date_local: '2026-12-01T00:00:00' }));
     assert.equal(u.time, null); assert.ok(!u.structured); assert.equal(u.durationS, 18000, 'no steps: moving_time');
   });

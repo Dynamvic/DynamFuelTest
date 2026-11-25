@@ -54,6 +54,8 @@
     const out = {};
     out.lang = ['nl', 'en'].includes(s.lang) ? s.lang : (s.lang !== undefined && fixed++, d.lang);
     out.usualStart = s.usualStart == null ? null : isHHMM(s.usualStart) ? s.usualStart : (fixed++, null);
+    // back-up reminder (polish B2): dates as YYYY-MM-DD
+    ['firstUse', 'lastBackup', 'backupSnooze'].forEach(k => { if (s[k] != null) { if (isIso(s[k])) out[k] = s[k]; else fixed++; } });
     out.onboarded = typeof s.onboarded === 'boolean' ? s.onboarded : d.onboarded;
     if (s.icuWrite != null) { if (typeof s.icuWrite === 'boolean') out.icuWrite = s.icuWrite; else fixed++; }   // Phase 4: off unless switched on
     // town for the forecast (P3-4): name + rounded coordinates only

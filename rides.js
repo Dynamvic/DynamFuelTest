@@ -53,7 +53,9 @@
       date, time: time === '00:00' ? null : time,                     // planned events often have no time → ask (Q21)
       durationS: structured ? +doc.duration : (+ev.moving_time || null), load: ev.icu_training_load ?? null,
       tags: Array.isArray(ev.tags) ? ev.tags.map(String) : [], goalTag: goalTag(ev.tags),
-      indoor: ev.type === 'VirtualRide' ? true : (typeof ev.indoor === 'boolean' ? ev.indoor : null),
+      // T5 sample (25-11-2026): Intervals.icu sends indoor:false by default (also for an "Indoor microbursts" ride), so only true
+      // is trusted; false or missing = ask the athlete. VirtualRide is always indoor.
+      indoor: ev.type === 'VirtualRide' || ev.indoor === true ? true : null,
       structured, steps: structured ? steps : null, carbsPerHour: ev.carbs_per_hour ?? null, icuFtp: ev.icu_ftp ?? null
     };
   }

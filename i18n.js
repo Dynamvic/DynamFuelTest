@@ -38,7 +38,7 @@
     sweat_test: 'Weeg jezelf naakt vlak voor en na een rit van ongeveer 1 uur, droog afgedept. Zweetverlies (l) = gewicht voor − gewicht na + wat je dronk (l) − plas (l). Deel door de rijtijd in uren. 1 kg verlies ≈ 1 l zweet (Sawka 2007). Meet in omstandigheden zoals je rit (binnen met ventilator, buiten bij die temperatuur).',
     wz_caf_t: 'Cafeïne', caffeine: 'Gebruik je cafeïne (koffie, cola, gels met cafeïne)?', caf_none: 'Nee', caf_low: 'Weinig (≤ 1–2 koffie per dag)', caf_normal: 'Gewoon (3 of meer per dag)',
     bedtime: 'Gewoonlijk naar bed om', caf_hint: 'Cafeïne wordt alleen gepland voor wedstrijden en nooit te laat voor het slapengaan.',
-    wz_bottle_t: 'Bidons', bottleMl: 'Inhoud van je bidon', cages: 'Aantal bidonhouders',
+    wz_bottle_t: 'Bidons', bottleMl: 'Inhoud van je bidon', bottle_other: 'Of een andere inhoud', cages: 'Aantal bidonhouders',
     wz_allergy_t: 'Allergieën', allergy_q: 'Producten met deze allergenen laten we weg:', avoidTraces: 'Ook "kan sporen bevatten" vermijden',
     a_gluten: 'Gluten', a_crustaceans: 'Schaaldieren', a_eggs: 'Ei', a_fish: 'Vis', a_peanuts: 'Pinda', a_soy: 'Soja', a_milk: 'Melk', a_nuts: 'Noten',
     a_celery: 'Selderij', a_mustard: 'Mosterd', a_sesame: 'Sesam', a_sulphites: 'Sulfiet', a_lupin: 'Lupine', a_molluscs: 'Weekdieren',
@@ -109,7 +109,7 @@
     /* settings */
     settings_t: 'Instellingen', set_lang: 'Taal', set_icu: 'Intervals.icu', set_start: 'Gewone starttijd', set_start_hint: 'Gebruikt als een geplande rit geen uur heeft.',
     set_backup: 'Back-up', bk_l: 'Je gegevens staan alleen op deze telefoon. Bewaar af en toe een back-up (bestand).', bk_file: 'Back-up bewaren', bk_file_key: 'Met Intervals.icu-sleutel',
-    bk_key_warn: 'Met sleutel: bewaar het bestand veilig, iedereen met het bestand kan je Intervals.icu lezen.', bk_done: 'Back-up gemaakt.',
+    bk_key_warn: 'Met sleutel: bewaar het bestand veilig, iedereen met het bestand kan je Intervals.icu lezen.', bk_done: 'Back-up gemaakt.', bk_rem_t: 'Tijd voor een back-up.', bk_rem_last: 'Je laatste back-up is van {d}.', bk_rem_never: 'Je hebt nog geen back-up gemaakt.', bk_later: 'Later',
     rs_t: 'Back-up terugzetten', rs_pick: 'Kies een back-upbestand', rs_err_format: 'Dit is geen DynamFuel-back-up.', rs_err_newer: 'Deze back-up komt van een nieuwere versie: werk de app eerst bij.',
     rs_err_read: 'Dit bestand kon niet gelezen worden.', rs_ask: 'Back-up van {d} terugzetten? Je huidige gegevens worden apart gehouden.', rs_go: 'Terugzetten',
     rs_done: 'Back-up teruggezet.', rs_fixed: 'Back-up teruggezet; {n} beschadigde waarden leeg gemaakt.', rs_fixed_1: 'Back-up teruggezet; 1 beschadigde waarde leeg gemaakt.',
@@ -156,7 +156,7 @@
     sweat_test: 'Weigh yourself naked just before and after a ride of about 1 hour, towel-dried. Sweat loss (l) = mass before − mass after + what you drank (l) − urine (l). Divide by the riding time in hours. 1 kg lost ≈ 1 l of sweat (Sawka 2007). Measure in conditions like your ride (indoors with a fan, outdoors at that temperature).',
     wz_caf_t: 'Caffeine', caffeine: 'Do you use caffeine (coffee, cola, caffeinated gels)?', caf_none: 'No', caf_low: 'A little (≤ 1–2 coffees a day)', caf_normal: 'Normal (3 or more a day)',
     bedtime: 'Usual bedtime', caf_hint: 'Caffeine is only planned for races and never too close to bedtime.',
-    wz_bottle_t: 'Bottles', bottleMl: 'Bottle size', cages: 'Number of bottle cages',
+    wz_bottle_t: 'Bottles', bottleMl: 'Bottle size', bottle_other: 'Or another size', cages: 'Number of bottle cages',
     wz_allergy_t: 'Allergies', allergy_q: 'Products with these allergens are left out:', avoidTraces: 'Also avoid "may contain traces"',
     a_gluten: 'Gluten', a_crustaceans: 'Crustaceans', a_eggs: 'Egg', a_fish: 'Fish', a_peanuts: 'Peanut', a_soy: 'Soy', a_milk: 'Milk', a_nuts: 'Tree nuts',
     a_celery: 'Celery', a_mustard: 'Mustard', a_sesame: 'Sesame', a_sulphites: 'Sulphites', a_lupin: 'Lupin', a_molluscs: 'Molluscs',
@@ -220,7 +220,7 @@
 
     settings_t: 'Settings', set_lang: 'Language', set_icu: 'Intervals.icu', set_start: 'Usual start time', set_start_hint: 'Used when a planned ride has no time.',
     set_backup: 'Back-up', bk_l: 'Your data is only on this phone. Save a back-up file now and then.', bk_file: 'Save back-up', bk_file_key: 'With Intervals.icu key',
-    bk_key_warn: 'With key: keep the file safe, anyone with the file can read your Intervals.icu.', bk_done: 'Back-up made.',
+    bk_key_warn: 'With key: keep the file safe, anyone with the file can read your Intervals.icu.', bk_done: 'Back-up made.', bk_rem_t: 'Time for a back-up.', bk_rem_last: 'Your last back-up is from {d}.', bk_rem_never: 'You have not made a back-up yet.', bk_later: 'Later',
     rs_t: 'Restore a back-up', rs_pick: 'Choose a back-up file', rs_err_format: 'This is not a DynamFuel back-up.', rs_err_newer: 'This back-up comes from a newer version: update the app first.',
     rs_err_read: 'This file could not be read.', rs_ask: 'Restore the back-up of {d}? Your current data is kept aside.', rs_go: 'Restore',
     rs_done: 'Back-up restored.', rs_fixed: 'Back-up restored; {n} damaged values emptied.', rs_fixed_1: 'Back-up restored; 1 damaged value emptied.',
@@ -414,14 +414,14 @@
     iw_send: 'Zet in Intervals.icu', iw_remove: 'Uit Intervals.icu halen', iw_preview: 'Wat er in Intervals.icu komt',
     iw_not_sent: 'Nog niet in Intervals.icu.', iw_sent: 'In Intervals.icu gezet op {d} om {t}.', iw_changed: 'Je plan is veranderd sinds je het in Intervals.icu zette: zet het opnieuw.',
     iw_done: 'In Intervals.icu gezet.', iw_removed: 'Uit Intervals.icu gehaald.', iw_restored: 'Intervals.icu paste de training aan: je oude beschrijving is teruggezet. Verwittig je coach.',
-    iw_targets: '{c} g{H} koolhydraten · {f} ml{H} · {n} mg{H} natrium', iw_at: 'om {clock}', iw_pack: 'Mee', iw_times: 'Eten', iw_drink: 'Drinken: ± {ml} ml elke {every} min'
+    iw_targets: '{c} g{H} koolhydraten · {f} ml{H} · {n} mg{H} natrium', iw_at: 'om {clock}', iw_pack: 'Mee', iw_times: 'Eten', iw_drink: 'Drinken: ± {ml} ml elke {every} min', stk_drink: 'drinken ± {ml} ml / {every} min', stk_eat: 'eten'
   });
   Object.assign(en, {
     iw_switch: 'Allow putting the fuel plan in Intervals.icu', iw_switch_l: 'Every planned ride then gets a button. DynamFuel only writes its own block at the end of the description; your coach\'s text stays.',
     iw_send: 'Put in Intervals.icu', iw_remove: 'Remove from Intervals.icu', iw_preview: 'What goes into Intervals.icu',
     iw_not_sent: 'Not in Intervals.icu yet.', iw_sent: 'Put in Intervals.icu on {d} at {t}.', iw_changed: 'Your plan changed since you put it in Intervals.icu: put it again.',
     iw_done: 'Put in Intervals.icu.', iw_removed: 'Removed from Intervals.icu.', iw_restored: 'Intervals.icu changed the workout: your old description was put back. Tell your coach.',
-    iw_targets: '{c} g{H} carbohydrate · {f} ml{H} · {n} mg{H} sodium', iw_at: 'at {clock}', iw_pack: 'Take', iw_times: 'Eat', iw_drink: 'Drink: ± {ml} ml every {every} min'
+    iw_targets: '{c} g{H} carbohydrate · {f} ml{H} · {n} mg{H} sodium', iw_at: 'at {clock}', iw_pack: 'Take', iw_times: 'Eat', iw_drink: 'Drink: ± {ml} ml every {every} min', stk_drink: 'drink ± {ml} ml / {every} min', stk_eat: 'eat'
   });  Object.assign(rnl, {
     'MATCH-01': 'Hele porties uit je voorraad, binnen {choTolPct} % van je doel, met hoogstens {maxDistinct} soorten producten naast drank (regel van je coach).',
     'MATCH-02': 'Bij gelijke keuze: eerst binnen {closeTolPct} % van het doel, dan zo weinig mogelijk producten, dan je favorieten.',

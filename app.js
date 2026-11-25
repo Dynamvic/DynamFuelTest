@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.4.0';
+const APP_VERSION = '0.4.1';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -122,7 +122,7 @@ function secCaf() {
 function secBottle() {
   const D = target();
   return `<div class="fld"><span class="lbl">${t('bottleMl')}</span>${chips('bottleMl', [[500, '500 ml'], [600, '600 ml'], [750, '750 ml'], [950, '950 ml']], D.bottleMl, 'n')}</div>
-    ${numField('bottleMl', '', 'ml')}
+    ${numField('bottleMl', t('bottle_other'), 'ml')}
     <div class="fld"><span class="lbl">${t('cages')}</span>${chips('cages', [[0, '0'], [1, '1'], [2, '2'], [3, '3']], D.cages, 'n')}</div>`;
 }
 const secAllergy = () => `<p>${t('allergy_q')}</p>${multi('allergens', BK.EU14.map(a => [a, t('a_' + a)]), target().allergens)}${check('avoidTraces', t('avoidTraces'))}`;
@@ -249,7 +249,7 @@ function allRides() {
 function vRides() {
   const list = allRides(), skipped = EVENTS.filter(e => !RD.isRide(e)).length;
   const upd = META.fetchedAt ? (() => { const d = new Date(META.fetchedAt); return t('rides_updated', { d: F.date(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`), t: `${pad(d.getHours())}:${pad(d.getMinutes())}` }); })() : '';
-  let html = brandbar() + installCard();
+  let html = brandbar() + backupReminder() + installCard();
   html += `<section class="card"><div class="row between"><div><h2>${t('rides_t')}</h2><small class="muted">${t('rides_window')}</small></div>
     ${ICU.key ? `<button class="iconbtn" data-act="fetch" aria-label="${t('rides_refresh')}"${UI.fetching ? ' disabled' : ''}>${IC.refresh}</button>` : ''}</div>
     ${UI.fetching ? `<p class="small muted" role="status">${t('loading')}</p>` : upd ? `<small class="muted">${upd}</small>` : ''}
@@ -387,10 +387,11 @@ function vRide(id) {
     const kind = s.sustained ? t('slot_sustained') : s.easy ? t('slot_food') : t('slot_gel');
     const shortEat = sc.eat.map(e => (itemById(e.id) || {}).name || e.id).join(' + ');
     return { time: X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min }), what: useStock ? sc.eat.map(e => itemName(e.id)).join(' + ') : kind,
-      short: (useStock ? shortEat : '') || (sc.drinkMl ? `${sc.drinkMl} ml` : ''), drink: sc.drinkMl ? t('slot_drink', { ml: sc.drinkMl }) : '' };
+      short: useStock ? shortEat : (T.cho.gph > 0 ? t('stk_eat') : ''), drink: sc.drinkMl ? t('slot_drink', { ml: sc.drinkMl }) : '' };
   });
   const cafOpen = (T.caffeine.on || T.caffeine.optional) && T.caffeine.status === 'open';
   UI.fuel = { title: r.name || t('g_' + goal), meta: [dayLabel(r.date), X.start || '', F.dur(parsed.durationS), t('g_' + goal)].filter(Boolean).join(' · '),
+    drink: drinkMl ? t('iw_drink', { ml: drinkMl, every }) : '', drinkShort: drinkMl ? t('stk_drink', { ml: drinkMl, every }) : '',
     metaShort: `${F.date(r.date)} ${X.start || ''}`.trim(), target: `${c.gph} g${hpart} · ${fl.mlph} ml${hpart}`,
     tiles: [{ k: t('cho'), v: String(c.gph), u: 'g' + hpart, s: c.gph || c.optional ? t('range', { lo: c.lo, hi: c.hi }) : '' },
       { k: t('fluid'), v: String(fl.mlph), u: 'ml' + hpart, s: t('total_ml', { ml: fl.totalMl }) },
@@ -789,15 +790,25 @@ function showUpdateBanner() {
 }
 
 /* ---------- back-up and restore ---------- */
+/* polish B2: remember the back-up date (the reminder on the Rides screen counts from it) */
+function bkMade() { SET.lastBackup = todayIso(); delete SET.backupSnooze; saveSet(); setTimeout(() => { if (!/^#settings/.test(location.hash)) rerender(); }, 800); }
+const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+function backupReminder() {
+  const from = SET.lastBackup || SET.firstUse, td = todayIso();
+  if (!SET.onboarded || !from || daysBetween(from, td) < 30 || (SET.backupSnooze && td < SET.backupSnooze)) return '';
+  if (!(STOCK.size || RIDES.size || P.massKg)) return '';
+  return `<div class="card warnc"><p><b>${t('bk_rem_t')}</b> ${SET.lastBackup ? t('bk_rem_last', { d: F.date(SET.lastBackup) }) : t('bk_rem_never')}</p>
+    <div class="row"><button class="btn primary" data-act="bk">${t('bk_file')}</button><button class="btn" data-act="bklater">${t('bk_later')}</button></div><p class="msg" id="bmsg" role="status"></p></div>`;
+}
 async function doBackup(withKey) {
   const data = BK.make({ settings: SET, profile: P, athlete: ATH, rides: [...RIDES.values()], items: [...STOCK.values()], plans: await DB.all('plans'), logs: await DB.all('logs'), icu: withKey ? ICU : null }, todayIso());
   const name = `dynamfuel-backup-${todayIso()}.json`, blob = new Blob([JSON.stringify(data)], { type: 'application/json' }), m = $('#bmsg');
   try {
     const file = new File([blob], name, { type: 'application/json' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'DynamFuel back-up' }); if (m) m.textContent = t('bk_done'); return; }
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'DynamFuel back-up' }); if (m) m.textContent = t('bk_done'); bkMade(); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }
   const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000); if (m) m.textContent = t('bk_done');
+  setTimeout(() => URL.revokeObjectURL(url), 4000); if (m) m.textContent = t('bk_done'); bkMade();
 }
 function restoreAsk(text) {
   let o; try { o = JSON.parse(text); } catch (e) { return toast(t('rs_err_read'), true); }
@@ -905,7 +916,7 @@ document.addEventListener('click', async ev => {
     const e = wzCheck(); if (e) { UI.wzErr = e; return rerender(); }
     UI.wzErr = '';
     if (a === 'wznext') { UI.wz.i++; route(); return scrollTo(0, 0); }
-    P = UI.wz.d; saveP(); SET.onboarded = true; saveSet(); UI.wz = null; location.hash = '#rides'; route();
+    P = UI.wz.d; saveP(); SET.onboarded = true; SET.firstUse = SET.firstUse || todayIso(); saveSet(); UI.wz = null; location.hash = '#rides'; route();
     if (ICU.key) fetchRides(true);
     return;
   }
@@ -949,6 +960,7 @@ document.addEventListener('click', async ev => {
   if (a === 'ownsave' && UI.own) return ownSave();
   if (a === 'owndel' && UI.own && UI.own.id) return sheet(`<h2>${t('own_del')}</h2><p>${esc(UI.own.name)}</p><button class="btn danger big wide" data-act="owndelgo">${t('own_del')}</button>`);
   if (a === 'owndelgo' && UI.own && UI.own.id) { const id = UI.own.id; STOCK.delete(id); await DB.del('items', id); closeSheet(); UI.own = null; location.hash = '#stock'; return; }
+  if (a === 'bklater') { SET.backupSnooze = RD.addDays(todayIso(), 7); saveSet(); return rerender(); }
   if (a === 'iwsend') return iwWrite(false);
   if (a === 'iwremove') return iwWrite(true);
   if (a === 'bk' || a === 'bkkey') return doBackup(a === 'bkkey');
@@ -977,6 +989,7 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 /* ---------- start ---------- */
 (async function boot() {
   document.documentElement.lang = lang();
+  if (SET.onboarded && !SET.firstUse) { SET.firstUse = todayIso(); saveSet(); }   // B2: existing athletes – the reminder starts counting today
   await checkActivation(todayIso());
   try {
     const [r, l] = await Promise.all([fetch('data/rules.json').then(x => x.json()), fetch('data/library.json').then(x => x.json())]);

@@ -49,15 +49,17 @@ const DFCard = (() => {
     if (m.pack.length) { head(m.hPack); x.fillStyle = C.fg; x.font = font(400, 30); m.pack.forEach(p => { y = para(x, '• ' + p, PAD, y, W - 2 * PAD, 40, 2) + 4; }); y += 18; }
     /* timeline: as many rows as fit above before/after and footer */
     const reserve = 70 + (m.pre.length + m.post.length ? 190 : 0);
-    if (m.slots.length) {
+    // polish B4: drinking is one summary line; the rows are only the moments with something to eat, so long rides fit
+    const rows = m.slots.filter(s => s.what);
+    if (rows.length || m.drink) {
       head(m.hTiming);
-      const rowH = 44, room = Math.max(0, Math.floor((H - reserve - y) / rowH)), show = m.slots.length > room ? Math.max(0, room - 1) : m.slots.length;
-      m.slots.slice(0, show).forEach(s => {
+      if (m.drink) { x.fillStyle = C.fg; x.font = font(600, 30); y = para(x, m.drink, PAD, y, W - 2 * PAD, 40, 2) + 8; }
+      const rowH = 44, room = Math.max(0, Math.floor((H - reserve - y) / rowH)), show = rows.length > room ? Math.max(0, room - 1) : rows.length;
+      rows.slice(0, show).forEach(s => {
         x.fillStyle = C.fg; x.font = font(700, 30, 'd'); x.fillText(s.time, PAD, y);
-        x.font = font(400, 30); const txt = [s.what, s.drink].filter(Boolean).join(' · ');
-        para(x, txt, PAD + 140, y, W - 2 * PAD - 140, 40, 1); y += rowH;
+        x.font = font(400, 30); para(x, s.what, PAD + 140, y, W - 2 * PAD - 140, 40, 1); y += rowH;
       });
-      if (show < m.slots.length) { x.fillStyle = C.muted; x.font = font(400, 28); x.fillText(`… +${m.slots.length - show}`, PAD + 140, y); y += rowH; }
+      if (show < rows.length) { x.fillStyle = C.muted; x.font = font(400, 28); x.fillText(`… +${rows.length - show}`, PAD + 140, y); y += rowH; }
       y += 14;
     }
     /* before / after (short) */
@@ -80,8 +82,8 @@ const DFCard = (() => {
 
   /* sticker: a 30 mm wide strip, one line per moment; printed with the browser's print dialog */
   function sticker(m, esc) {
-    const rows = m.slots.map(s => `<tr><th>${esc(s.time)}</th><td>${esc(s.short || s.what || '')}</td></tr>`).join('');
-    return `<div class="stk"><div class="stkh"><b>${esc(m.title)}</b><span>${esc(m.metaShort)}</span><span>${esc(m.target)}</span></div><table>${rows}</table><div class="stkf">DynamFuel</div></div>`;
+    const rows = m.slots.filter(s => s.short).map(s => `<tr><th>${esc(s.time)}</th><td>${esc(s.short)}</td></tr>`).join('');
+    return `<div class="stk"><div class="stkh"><b>${esc(m.title)}</b><span>${esc(m.metaShort)}</span><span>${esc(m.target)}</span>${m.drinkShort ? `<span>${esc(m.drinkShort)}</span>` : ''}</div><table>${rows}</table><div class="stkf">DynamFuel</div></div>`;
   }
   function print(m, esc) {
     let el = document.getElementById('print'); if (!el) { el = document.createElement('div'); el.id = 'print'; document.body.appendChild(el); }
