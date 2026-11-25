@@ -33,12 +33,12 @@
     const byId = new Map(items.map(i => [i.id, i]));
     const favs = new Set((stock || []).filter(s => s.fav).map(s => s.id));
     const notes = [];
-    const avail = [];
+    const avail = [], cafAvail = [];
     for (const s of stock || []) {
       const it = byId.get(s.id); if (!it || it.hidden || !(s.qty > 0)) continue;
       const a = allowed(it, profile);
       if (!a.ok) { notes.push({ key: 'excluded', p: { id: it.id, why: a.why } }); continue; }
-      if (it.caffeineMg > 0) continue;                       // caffeinated products are planned with the caffeine doses (Phase 3)
+      if (it.caffeineMg > 0) { cafAvail.push({ it, qty: Math.floor(s.qty) }); continue; }   // only for the planned caffeine doses (P3-2)
       avail.push({ it, qty: Math.floor(s.qty) });
     }
     avail.sort((a, b) => a.it.id < b.it.id ? -1 : 1);
@@ -186,6 +186,9 @@
     const refillBottles = Number.isFinite(atStart) ? Math.max(0, bottles.length - atStart) : 0;
     if (refillBottles) pack.push({ refill: true, bottles: refillBottles });
 
+    /* ---- caffeine (P3-2): late doses use caffeine gels that replace normal gels; the dose before the start stays coffee/any product ---- */
+    const caffeine = caffeineSwap(T, schedule, pack, cafAvail, totals, hours, rnd);
+
     // MATCH-04: the other options the athlete can pick (summaries; picking one re-runs the matcher with that choice)
     const summary = (c, kind) => c && choT > 0 ? { kind, within: c.within, mtcOk: c.mtcOk, choGph: F.roundTo(c.cho / hours, rnd.choG),
       drink: c.drink ? { id: c.drink.it.id, bottles: c.k, doses: c.drink.doses, gPerL: Math.round(c.drink.choPerMl * 1000) } : null,
@@ -194,9 +197,49 @@
 
     return {
       matcher: VERSION, within: !!(best && best.within), mtcOk: !best || best.mtcOk, alternatives,
-      solids: best ? best.list.map(x => ({ id: x.id, n: x.n, choG: x.cho })) : [], bottles, bottleMl, totals, gaps, shopping, schedule, pack, notes,
+      solids: best ? best.list.map(x => ({ id: x.id, n: x.n, choG: x.cho })) : [], bottles, bottleMl, totals, gaps, shopping, schedule, pack, notes, caffeine,
       rules: ['MATCH-01', 'MATCH-02', 'CHO-MTC-01', 'RND-01']
     };
+  }
+
+  /* For every planned caffeine dose during the ride (atMin > 0): pick 1–2 caffeine gels/chews from stock with the most caffeine
+     that does not exceed the dose (then the closest carbohydrate to the gels they replace, then fewest, then id), and put them in
+     place of the normal gels nearest to that moment, so the carbohydrate plan stays (almost) the same. No normal gel to replace →
+     added at the nearest moment ('extra'). Returns [{ atMin, doseMg, id, n, mg, choDiffG, extra }] or { none: true }. */
+  function caffeineSwap(T, sched, pack, cafAvail, totals, hours, rnd) {
+    const out = [];
+    if (!T.caffeine || !T.caffeine.on || !sched.length) return out;
+    const used = {};
+    for (const d of T.caffeine.doses.filter(x => x.atMin > 0)) {
+      const gels = [];
+      sched.forEach(s => s.eat.forEach((e, k) => { if (!e.solid && !e.caf) gels.push({ s, k, e, dist: Math.abs(s.min - d.atMin) }); }));
+      gels.sort((a, b) => a.dist - b.dist || a.s.min - b.s.min);
+      let best = null;
+      for (const c of cafAvail) {
+        if (!['gel', 'chew'].includes(c.it.category) || !(c.it.choG >= 0)) continue;
+        for (let n = 1; n <= Math.min(2, c.qty - (used[c.it.id] || 0)); n++) {
+          const mg = n * c.it.caffeineMg; if (mg > d.mg + 1e-9) continue;
+          const repl = gels.slice(0, n), choDiff = n * c.it.choG - repl.reduce((a, g) => a + g.e.cho, 0);
+          const key = [-mg, Math.abs(choDiff), n, c.it.id];
+          if (!best || less(key, best.key)) best = { key, c, n, mg, repl, choDiff };
+        }
+      }
+      if (!best) { out.push({ atMin: d.atMin, doseMg: d.mg, none: true }); continue; }
+      const { c, n, repl } = best;
+      for (let i = 0; i < n; i++) {
+        const item = { id: c.it.id, cho: c.it.choG, solid: false, caf: c.it.caffeineMg };
+        if (repl[i]) {
+          const old = repl[i].e.id; repl[i].s.eat[repl[i].k] = item;
+          const p = pack.find(x => x.id === old && !x.bottle); if (p) { p.n--; if (!p.n) pack.splice(pack.indexOf(p), 1); }
+        } else { const near = sched.slice().sort((a, b) => Math.abs(a.min - d.atMin) - Math.abs(b.min - d.atMin))[0]; near.eat.push(Object.assign(item, { extra: true })); }
+      }
+      const p = pack.find(x => x.id === c.it.id && !x.bottle); if (p) p.n += n; else pack.unshift({ id: c.it.id, n });
+      used[c.it.id] = (used[c.it.id] || 0) + n;
+      const extraCho = repl.length < n ? (n - repl.length) * c.it.choG : 0;
+      totals.choG = F.roundTo(totals.choG + best.choDiff, rnd.choG); totals.choGph = F.roundTo(totals.choG / hours, rnd.choG);
+      out.push({ atMin: d.atMin, doseMg: d.mg, id: c.it.id, n, mg: best.mg, choDiffG: F.roundTo(best.choDiff, 1), extra: repl.length < n, extraChoG: extraCho });
+    }
+    return out;
   }
 
   function idsKey(opt, pick) { return (opt.drink ? `${opt.drink.it.id}x${opt.k};` : '') + pick.map(p => `${p.id}x${p.n}`).join(';'); }

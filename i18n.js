@@ -84,7 +84,7 @@
     cho_gut: 'De richtlijn is {guide} g/u, maar jij verdraagt nu {tol} g/u. Train je darmen stap voor stap met je coach (Jeukendrup 2017).',
     cho_notol: 'Vul in je profiel in hoeveel koolhydraten je per uur verdraagt.',
     na_none: 'Niet nodig voor ritten tot 60 min.', na_perl: '{mg} mg per liter drank',
-    caf_on: '{mg} mg ({mgkg} mg/kg) om {clock}', caf_at: '{mg} mg ({mgkg} mg/kg) {min} min na de start', caf_before: '{n} min vóór de start',
+    caf_on: '{mg} mg ({why}) om {clock}', caf_at: '{mg} mg ({why}) {min} min na de start', caf_cap: 'max. {max} mg per keer, EFSA', caf_daily: 'Samen {mg} mg gepland. EFSA: max. {max} mg per dag uit alle bronnen, koffie inbegrepen.', caf_off_pregnancy: 'Uit: zwanger (EFSA).', caf_before: '{n} min vóór de start',
     caf_opt: 'Optioneel bij een kernsessie: overleg met je coach.', caf_off_goal: 'Niet gepland: cafeïne alleen voor wedstrijden.', caf_off_nouse: 'Uit: je gebruikt geen cafeïne.',
     caf_off_minor: 'Uit: onder 18 jaar.', caf_off_noage: 'Uit: vul je geboortejaar in.', caf_off_nomass: 'Uit: vul je gewicht in.',
     caf_dropped: '{mg} mg om {clock} geschrapt: te kort voor het slapengaan.', caf_notime: 'Vul starttijd en bedtijd in voor de cafeïnetijden.',
@@ -121,7 +121,7 @@
     /* about */
     about_t: 'Over DynamFuel', about_l: 'DynamFuel is een gratis app van DynamVic Cycling coach. Je krijgt per geplande rit een voedingsplan dat steunt op wetenschappelijke richtlijnen. Elk getal heeft een bron of een regel van je coach.',
     privacy_t: 'Privacy', privacy: 'Geen account, geen reclame, geen tracking. Alles wat je invult blijft op deze telefoon. De app praat alleen met Intervals.icu (met je eigen sleutel) en, als je een gemeente instelt, met Open-Meteo voor het weer – rechtstreeks vanaf je telefoon. Back-ups maak je zelf.',
-    sources_t: 'Gegevens en lettertypes', sources: 'Trainingen: Intervals.icu (met je eigen sleutel). Weersvoorspelling: Open-Meteo.com (CC BY 4.0). Lettertypes Poppins en Inter onder de SIL Open Font License. Productwaarden: etiketten en websites van de merken, gecontroleerd op de vermelde datum.',
+    sources_t: 'Gegevens en lettertypes', sources: 'Trainingen: Intervals.icu (met je eigen sleutel). Weersvoorspelling: Open-Meteo.com (CC BY 4.0). Lettertypes Poppins en Inter onder de SIL Open Font License. Productwaarden: etiketten en websites van de merken, gecontroleerd op de vermelde datum. Gewoon eten: NEVO (RIVM) en USDA FoodData Central.',
     lock_t: 'DynamFuel', lock_l: 'Deze app is nog niet geactiveerd op deze telefoon.'
   };
 
@@ -197,7 +197,7 @@
     cho_gut: 'The guideline is {guide} g/h, but you tolerate {tol} g/h now. Train your gut step by step with your coach (Jeukendrup 2017).',
     cho_notol: 'Enter in your profile how much carbohydrate per hour you tolerate.',
     na_none: 'Not needed for rides up to 60 min.', na_perl: '{mg} mg per litre of drink',
-    caf_on: '{mg} mg ({mgkg} mg/kg) at {clock}', caf_at: '{mg} mg ({mgkg} mg/kg) {min} min after the start', caf_before: '{n} min before the start',
+    caf_on: '{mg} mg ({why}) at {clock}', caf_at: '{mg} mg ({why}) {min} min after the start', caf_cap: 'max. {max} mg per dose, EFSA', caf_daily: 'Together {mg} mg planned. EFSA: max. {max} mg per day from all sources, coffee included.', caf_off_pregnancy: 'Off: pregnant (EFSA).', caf_before: '{n} min before the start',
     caf_opt: 'Optional for a key session: talk to your coach.', caf_off_goal: 'Not planned: caffeine only for races.', caf_off_nouse: 'Off: you do not use caffeine.',
     caf_off_minor: 'Off: under 18.', caf_off_noage: 'Off: enter your birth year.', caf_off_nomass: 'Off: enter your body mass.',
     caf_dropped: '{mg} mg at {clock} dropped: too close to bedtime.', caf_notime: 'Enter start time and bedtime for the caffeine times.',
@@ -231,7 +231,7 @@
 
     about_t: 'About DynamFuel', about_l: 'DynamFuel is a free app by DynamVic Cycling coach. For every planned ride you get a fueling plan based on scientific guidelines. Every number has a source or a rule from your coach.',
     privacy_t: 'Privacy', privacy: 'No account, no ads, no tracking. Everything you enter stays on this phone. The app only talks to Intervals.icu (with your own key) and, if you set a town, to Open-Meteo for the weather – straight from your phone. You make back-ups yourself.',
-    sources_t: 'Data and fonts', sources: 'Workouts: Intervals.icu (with your own key). Weather forecast: Open-Meteo.com (CC BY 4.0). Fonts Poppins and Inter under the SIL Open Font License. Product values: labels and brand websites, checked on the date shown.',
+    sources_t: 'Data and fonts', sources: 'Workouts: Intervals.icu (with your own key). Weather forecast: Open-Meteo.com (CC BY 4.0). Fonts Poppins and Inter under the SIL Open Font License. Product values: labels and brand websites, checked on the date shown. Real food: NEVO (RIVM) and USDA FoodData Central.',
     lock_t: 'DynamFuel', lock_l: 'This app is not activated on this phone yet.'
   };
 
@@ -271,7 +271,7 @@
     'CAF-01': 'Cafeïne {rangeMgkg} mg/kg ongeveer {beforeMin} min vooraf; de app neemt {mgkg} mg/kg (Guest 2021).',
     'CAF-02': 'In lange ritten later een lage dosis {rangeMgkg} mg/kg; de app neemt {mgkg} mg/kg (Guest 2021).',
     'CAF-03': 'Cafeïne alleen gepland voor wedstrijden, optioneel bij kernsessies (regel van je coach).',
-    'CAF-04': 'Geen cafeïne onder 18 jaar.', 'CAF-05': 'Veilige grenzen van EFSA (2015): nog te lezen – de cafeïnedosis is nog niet bevestigd.',
+    'CAF-04': 'Geen cafeïne onder 18 jaar.', 'CAF-05': 'EFSA (2015): hoogstens {singleMaxMg} mg per keer en {dailyMaxMg} mg per dag uit alle bronnen (koffie inbegrepen); {sleepMg} mg kan je slaap al verstoren.', 'CAF-07': 'Zwanger: geen geplande cafeïne – de veilige dosis voor één keer geldt niet vóór zware inspanning (EFSA 2015).',
     'CAF-06': 'Geen cafeïne later dan {cutoffH} u voor het slapengaan (regel van je coach).',
     'REC-01': 'Volgende training binnen {withinH} u: {gkgh} g/kg per uur gedurende {hours} u, plus ± {proteinGkg} g eiwit/kg (Thomas 2016).',
     'REC-02': 'Anders: een maaltijd met koolhydraten en {proteinGkg} g eiwit/kg binnen {withinH} u (Kerksick 2017).',
@@ -318,7 +318,7 @@
     'CAF-01': 'Caffeine {rangeMgkg} mg/kg about {beforeMin} min before; the app uses {mgkg} mg/kg (Guest 2021).',
     'CAF-02': 'In long rides, a low dose of {rangeMgkg} mg/kg later on; the app uses {mgkg} mg/kg (Guest 2021).',
     'CAF-03': 'Caffeine planned only for races, optional for key sessions (your coach\'s rule).',
-    'CAF-04': 'No caffeine under 18.', 'CAF-05': 'EFSA (2015) safety limits: still to be read – the caffeine dose is not confirmed yet.',
+    'CAF-04': 'No caffeine under 18.', 'CAF-05': 'EFSA (2015): at most {singleMaxMg} mg per dose and {dailyMaxMg} mg per day from all sources (coffee included); {sleepMg} mg can already disturb your sleep.', 'CAF-07': 'Pregnant: no planned caffeine – the safe single dose does not apply before hard exercise (EFSA 2015).',
     'CAF-06': 'No caffeine later than {cutoffH} h before bedtime (your coach\'s rule).',
     'REC-01': 'Next workout within {withinH} h: {gkgh} g/kg per hour for {hours} h, plus ± {proteinGkg} g protein/kg (Thomas 2016).',
     'REC-02': 'Otherwise: a meal with carbohydrate and {proteinGkg} g protein/kg within {withinH} h (Kerksick 2017).',
@@ -334,7 +334,7 @@
   Object.assign(nl, {
     tab_stock: 'Voorraad', stock_t: 'Voorraad', stock_l: 'Duid aan wat je in huis hebt en hoeveel. De app kiest alleen uit wat op voorraad is.',
     stock_all: 'Alles', stock_in: 'Op voorraad', stock_hide: 'Verbergen', stock_unhide: 'Terugzetten', stock_hidden: 'Verborgen producten ({n})',
-    stock_fav: 'Favoriet', stock_caf: 'met cafeïne – nog niet in de paklijst', stock_none: 'Nog niets op voorraad.', stock_less: 'Eén minder', stock_more: 'Eén meer',
+    stock_fav: 'Favoriet', stock_caf: 'met cafeïne – alleen voor je geplande cafeïne (wedstrijden)', caf_pre_how: 'koffie of een cafeïneproduct', caf_late_prod: '{n}× {name} ({mg} mg) voor de dosis van {dose} mg, in plaats van gewone gels', caf_late_none: 'Geen cafeïnegel op voorraad voor de dosis van {mg} mg.', caf_late_extra: '(extra, geen gewone gel om te vervangen)', stock_none: 'Nog niets op voorraad.', stock_less: 'Eén minder', stock_more: 'Eén meer',
     cat_gel: 'Gels', cat_chew: 'Chews', cat_bar: 'Repen', cat_drink: 'Sportdrank', cat_el: 'Elektrolyten', cat_food: 'Gewoon eten',
     u_gel: 'gels', u_bar: 'repen', u_chew: 'porties', u_drink: 'dosissen', u_electrolyte: 'tabletten', u_food: 'porties',
     serv_drink: 'per dosis: {g} g poeder in {ml} ml water', serv_tab: 'per tablet in {ml} ml water', gf: 'glucose + fructose',
@@ -351,7 +351,7 @@
   Object.assign(en, {
     tab_stock: 'Stock', stock_t: 'Stock', stock_l: 'Mark what you have at home and how much. The app only chooses from what is in stock.',
     stock_all: 'All', stock_in: 'In stock', stock_hide: 'Hide', stock_unhide: 'Show again', stock_hidden: 'Hidden products ({n})',
-    stock_fav: 'Favourite', stock_caf: 'with caffeine – not in the pack list yet', stock_none: 'Nothing in stock yet.', stock_less: 'One less', stock_more: 'One more',
+    stock_fav: 'Favourite', stock_caf: 'with caffeine – only for your planned caffeine (races)', caf_pre_how: 'coffee or a caffeine product', caf_late_prod: '{n}× {name} ({mg} mg) for the {dose} mg dose, instead of normal gels', caf_late_none: 'No caffeine gel in stock for the {mg} mg dose.', caf_late_extra: '(extra, no normal gel to replace)', stock_none: 'Nothing in stock yet.', stock_less: 'One less', stock_more: 'One more',
     cat_gel: 'Gels', cat_chew: 'Chews', cat_bar: 'Bars', cat_drink: 'Sports drink', cat_el: 'Electrolytes', cat_food: 'Real food',
     u_gel: 'gels', u_bar: 'bars', u_chew: 'servings', u_drink: 'doses', u_electrolyte: 'tablets', u_food: 'servings',
     serv_drink: 'per dose: {g} g powder in {ml} ml water', serv_tab: 'per tablet in {ml} ml water', gf: 'glucose + fructose',
@@ -370,6 +370,7 @@
     wx_town: 'Gemeente', wx_search: 'Zoeken', wx_clear: 'Wissen', wx_noplace: 'Geen gemeente gevonden.', wx_err: 'Open-Meteo is niet bereikbaar (offline?).',
     wx_attr: 'Weergegevens: Open-Meteo.com (CC BY 4.0).', wx_loading: 'Voorspelling ophalen…', wx_fc: 'Voorspelling {place}: {t} °C (hoogste tijdens je rit, Open-Meteo).',
     wx_own: 'Jouw waarde wordt gebruikt.', wx_none: 'Geen voorspelling beschikbaar: vul zelf in.', wx_set: 'Stel je gemeente in voor de voorspelling',
+    food_serving: '1 stuk = {g} g', food_need_g: 'Vul het gewicht in (g): zonder gewicht wordt dit niet in je paklijst gebruikt.', food_src: 'Bron van de waarden',
     card_share: 'Deel als afbeelding', card_sticker: 'Sticker printen', card_saved: 'Afbeelding bewaard.',
     card_foot: 'DynamFuel geeft algemene richtlijnen, geen medisch advies. Drink nooit meer dan je zweet.'
   });
@@ -378,6 +379,7 @@
     wx_town: 'Town', wx_search: 'Search', wx_clear: 'Remove', wx_noplace: 'No town found.', wx_err: 'Open-Meteo cannot be reached (offline?).',
     wx_attr: 'Weather data: Open-Meteo.com (CC BY 4.0).', wx_loading: 'Getting the forecast…', wx_fc: 'Forecast {place}: {t} °C (highest during your ride, Open-Meteo).',
     wx_own: 'Your value is used.', wx_none: 'No forecast available: enter it yourself.', wx_set: 'Set your town for the forecast',
+    food_serving: '1 piece = {g} g', food_need_g: 'Enter the weight (g): without it this is not used in your pack list.', food_src: 'Source of the values',
     card_share: 'Share as image', card_sticker: 'Print sticker', card_saved: 'Image saved.',
     card_foot: 'DynamFuel gives general guidelines, not medical advice. Never drink more than you sweat.'
   });  Object.assign(rnl, {

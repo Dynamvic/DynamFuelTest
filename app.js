@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.3.1';
+const APP_VERSION = '0.3.4';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -341,7 +341,7 @@ function vRide(id) {
     <div class="tile"><span class="k">${t('sodium')}</span><span class="v">${na.none ? '–' : na.mgph}<small>${na.none ? '' : ' mg' + hpart}</small></span><span class="s">${na.none ? t('na_none') : t('na_perl', { mg: na.mgPerL })}</span>${statusPill(na.status)}</div></div>
     ${c.gph ? `<p class="small muted">${t('total_g', { g: c.totalG })}</p>` : ''}
     ${notes.length ? `<ul class="plain small">${notes.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-    <div class="fld"><span class="lbl">${t('caffeine_t')} ${T.caffeine.on || T.caffeine.optional ? statusPill(T.caffeine.status) : ''}</span>${cafText(T.caffeine)}</div></section>`;
+    <div class="fld"><span class="lbl">${t('caffeine_t')} ${T.caffeine.on || T.caffeine.optional ? statusPill(T.caffeine.status) : ''}</span>${cafText(T.caffeine)}${cafMatchText(M)}</div></section>`;
   h += packCard(M, T, ctx, C, needRefill);
 
   /* timing: with stock, the products per moment (matcher schedule); without, what kind of intake fits */
@@ -390,13 +390,22 @@ function cafText(cf) {
   if (cf.off) return `<p class="muted">${t('caf_off_' + cf.off)}</p>`;
   return ul(cafLines(cf));
 }
+/* which caffeine product covers each dose during the ride (matcher, P3-2) */
+function cafMatchText(M) {
+  const L = (M.caffeine || []).map(c => c.none ? t('caf_late_none', { mg: c.doseMg })
+    : t('caf_late_prod', { n: c.n, name: esc(itemName(c.id)), mg: c.mg, dose: c.doseMg }) + (c.extra ? ' ' + t('caf_late_extra') : ''));
+  return L.length ? ul(L) : '';
+}
 function cafLines(cf) {
   if (cf.optional) return [t('caf_opt')];
   if (cf.off) return [t('caf_off_' + cf.off)];
-  const out = cf.doses.map(d => d.clock ? t('caf_on', { mg: d.mg, mgkg: ns(d.mgkg), clock: d.clock }) + (d.atMin < 0 ? ` (${t('caf_before', { n: -d.atMin })})` : '')
-    : d.atMin < 0 ? `${d.mg} mg (${ns(d.mgkg)} mg/kg) – ${t('caf_before', { n: -d.atMin })}` : t('caf_at', { mg: d.mg, mgkg: ns(d.mgkg), min: d.atMin }));
-  cf.dropped.forEach(d => out.push(t('caf_dropped', { mg: d.mg, clock: d.clock || '' })));
+  const R5 = DATA.rules.rules['CAF-05'];
+  const why = d => d.capped ? t('caf_cap', { max: d.capped === 'single' ? R5.singleMaxMg : d.mg }) : `${ns(d.mgkg)} mg/kg`;
+  const out = cf.doses.map(d => d.clock ? t('caf_on', { mg: d.mg, why: why(d), clock: d.clock }) + (d.atMin < 0 ? ` (${t('caf_before', { n: -d.atMin })}) – ${t('caf_pre_how')}` : '')
+    : d.atMin < 0 ? `${d.mg} mg (${why(d)}) – ${t('caf_before', { n: -d.atMin })}` : t('caf_at', { mg: d.mg, why: why(d), min: d.atMin }));
+  cf.dropped.filter(d => d.dropped === 'bedtime').forEach(d => out.push(t('caf_dropped', { mg: d.mg, clock: d.clock || '' })));
   if (!cf.doses.some(d => d.clock) && cf.doses.length && !cf.rules.includes('CAF-06')) out.push(t('caf_notime'));
+  if (cf.doses.length) out.push(t('caf_daily', { mg: cf.totalMg, max: cf.dailyMaxMg }));   // CAF-05: coffee counts too
   return out;
 }
 
@@ -457,11 +466,14 @@ function postLines(p) {
 
 /* ---------- stock (library + what the athlete has) ---------- */
 const CATS = [['gel', 'cat_gel'], ['chew', 'cat_chew'], ['bar', 'cat_bar'], ['drink', 'cat_drink'], ['electrolyte', 'cat_el'], ['food', 'cat_food']];
-const libItems = () => DATA.library ? DATA.library.items : [];
+/* products from the spreadsheet + real food (food.json) with the athlete's weights */
+const foodById = id => DATA.food && DATA.food.items.find(f => f.id === id);
+const libItems = () => (DATA.library ? DATA.library.items : []).concat(DATA.caffeine ? DATA.caffeine.items : []).concat(DATA.food ? DATA.food.items.map(f => DFFood.toItem(f, (STOCK.get(f.id) || {}).grams, lang())) : []);
 const itemById = id => libItems().find(x => x.id === id);
-const itemName = id => { const it = itemById(id); return it ? `${it.brand} ${it.name}` : id; };
+const itemName = id => { const it = itemById(id); return it ? `${it.brand} ${it.name}`.trim() : id; };
 const stockList = () => [...STOCK.values()].filter(s => s.qty > 0 && !s.hidden && itemById(s.id)).map(s => ({ id: s.id, qty: s.qty, fav: !!s.fav }));
 function servingText(it) {
+  if (it.food) return it.serving.amount != null ? t('food_serving', { g: ns(it.serving.amount) }) : '';
   if (it.category === 'drink' && it.waterMl) return t('serv_drink', { g: ns(it.powderG ?? '?'), ml: it.waterMl });
   if (it.category === 'electrolyte' && it.waterMl) return t('serv_tab', { ml: it.waterMl });
   const s = it.serving || {}; return [s.amount != null ? `${ns(s.amount)} ${s.unit || ''}`.trim() : '', s.format || ''].filter(Boolean).join(' · ');
@@ -472,11 +484,18 @@ function itemRow(it) {
   return `<div class="card item${s.qty > 0 ? ' instock' : ''}"><div class="row between nowrap"><div class="grow"><b>${esc(it.brand)} ${esc(it.name)}</b>
       <div class="meta"><span>${facts}</span><span>${esc(servingText(it))}</span>${it.mtc ? `<span class="pill coach">${t('gf')}</span>` : ''}${it.caffeineMg > 0 ? `<span class="pill open">${t('stock_caf')}</span>` : ''}</div></div>
       <button class="iconbtn star" data-act="sfav" data-id="${esc(it.id)}" aria-pressed="${!!s.fav}" aria-label="${t('stock_fav')}">${s.fav ? '★' : '☆'}</button></div>
-    ${!a.ok ? `<p class="small err">${t('excl_' + a.why)}</p>` : ''}
+    ${!a.ok ? `<p class="small err">${t('excl_' + a.why)}</p>` : ''}${it.food ? foodWeights(it) : ''}
     <div class="row between"><div class="row stepper"><button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="-1" aria-label="${t('stock_less')}"${s.qty > 0 ? '' : ' disabled'}>−</button>
       <input type="text" inputmode="numeric" class="qty" data-sqid="${esc(it.id)}" value="${s.qty || 0}" aria-label="${esc(it.brand + ' ' + it.name)}">
-      <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}">+</button><span class="muted small">${t('u_' + it.category)}</span></div>
+      <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}">+</button><span class="muted small">${it.food ? esc((foodById(it.id).unit || {})[lang()] || '') : t('u_' + it.category)}</span></div>
       <button class="linkbtn" data-act="shide" data-id="${esc(it.id)}">${s.hidden ? t('stock_unhide') : t('stock_hide')}</button></div></div>`;
+}
+/* real food: weight per part (the source weight is prefilled where one exists) + where the values come from */
+function foodWeights(it) {
+  const f = foodById(it.id); if (!f) return '';
+  return `${it.missingWeight ? `<p class="small warnc-t">${t('food_need_g')}</p>` : ''}<div class="row">${f.parts.map((p, i) => `<label class="fld small"><span>${esc(p.label[lang()] || p.label.nl)}</span>
+      <span class="tin"><input type="text" inputmode="decimal" data-gid="${esc(f.id)}" data-gi="${i}" value="${esc(ns(it.grams[i]))}" placeholder="?"><span>g</span></span></label>`).join('')}</div>
+    <details class="inl small"><summary>${t('food_src')}</summary><ul class="plain small muted">${f.parts.map(p => `<li>${esc(p.ref)}${p.gSource ? ` · ${esc(p.gSource)}` : ''}</li>`).join('')}${f.mtcBasis ? `<li>${esc(f.mtcBasis)}</li>` : ''}</ul></details>`;
 }
 function vStock() {
   const f = UI.stockFilter || 'all', items = libItems();
@@ -566,7 +585,7 @@ function vSettings() {
     <p class="small muted center">${t('version', { a: APP_VERSION, r: DATA.rules.version, l: DATA.library ? DATA.library.version : '–' })}</p>`;
 }
 function vAbout() {
-  const refs = Object.entries(DATA.rules.refs).filter(([k]) => k !== 'COACH');
+  const refs = Object.entries(DATA.rules.refs).filter(([k]) => k !== 'COACH').concat(DATA.food ? Object.entries(DATA.food.sources).map(([k, s]) => [k, { cite: s.cite + ' ' + s.url }]) : []);
   return `${topbar(t('about_t'))}
     <section class="card"><picture><source srcset="icons/logo-light.png" media="(prefers-color-scheme: dark)"><img class="logo-big" src="icons/logo-dark.png" alt="DynamVic Cycling coach"></picture>
       <p>${t('about_l')}</p><p class="small">${t('disclaimer')}</p></section>
@@ -684,6 +703,12 @@ document.addEventListener('change', async ev => {
   if (el.dataset.icu) { ICU[el.dataset.icu] = el.value.trim(); saveIcu(); if (!UI.wz) toast(t('icu_saved_key')); return; }
   if (el.dataset.set) { SET[el.dataset.set] = BK.isHHMM(el.value) ? el.value : null; saveSet(); toast(t('saved')); return; }
   if (el.dataset.add) { UI.add[el.dataset.add] = el.value; return; }
+  if (el.dataset.gid) {
+    const id = el.dataset.gid, i = +el.dataset.gi, f = foodById(id); if (!f) return;
+    const s = String(el.value).trim().replace(',', '.'), x = +s, g = (STOCK.get(id) || {}).grams ? STOCK.get(id).grams.slice() : f.parts.map(() => null);
+    if (s === '') g[i] = null; else if (isFinite(x) && x > 0 && x <= 1000) g[i] = Math.round(x * 10) / 10; else { toast(t('err_range', { lo: 1, hi: 1000 }), true); return rerender(); }
+    await saveStock(id, { grams: g }); return rerender();
+  }
   if (el.dataset.sqid) { const n = parseInt(el.value, 10); await saveStock(el.dataset.sqid, { qty: isFinite(n) ? n : 0 }); return rerender(); }
   if (el.dataset.rf) {
     const id = rideIdFromHash(), f = el.dataset.rf; if (!id) return;
@@ -778,6 +803,8 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
   try {
     const [r, l] = await Promise.all([fetch('data/rules.json').then(x => x.json()), fetch('data/library.json').then(x => x.json())]);
     DATA.rules = r; DATA.library = l;
+    try { DATA.food = await fetch('data/food.json').then(x => x.json()); } catch (e) { DATA.food = null; }
+    try { DATA.caffeine = await fetch('data/caffeine.json').then(x => x.json()); } catch (e) { DATA.caffeine = null; }
   } catch (e) { DATA.err = true; }
   try { EVENTS = await DB.all('events'); (await DB.all('rides')).forEach(x => RIDES.set(x.id, x)); (await DB.all('items')).forEach(x => STOCK.set(x.id, x)); } catch (e) { }
   route();
