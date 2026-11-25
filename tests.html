@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>DynamFuel – tests</title>
+<style>
+  :root { --bg:#F5F5F3; --fg:#111214; --muted:#5D616B; --ok:#157F4B; --bad:#B42318; --warn:#9A6200; --line:#E1E2E5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0E0F11; --fg:#EDEEF0; --muted:#9BA0AA; --ok:#4CC38A; --bad:#FF7A6E; --warn:#E8B04A; --line:#2A2C31; } }
+  body { font: 15px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--fg); margin: 0; padding: 16px; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  #sum { font-size: 18px; font-weight: 600; margin: 8px 0 16px; }
+  .pass { color: var(--ok); } .fail { color: var(--bad); } .pending { color: var(--warn); }
+  li { padding: 6px 0; border-bottom: 1px solid var(--line); list-style: none; }
+  ul { padding: 0; margin: 0; }
+  pre { white-space: pre-wrap; font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<h1>DynamFuel – tests</h1>
+<p class="muted">Runs every test file of the app. The same files run in Node with <code>node --test app/tests/</code>.</p>
+<div id="sum">Running…</div>
+<ul id="out"></ul>
+<script src="fmt.js"></script>
+<script src="workout.js"></script>
+<script src="engine.js"></script>
+<script src="match.js"></script>
+<script src="rides.js"></script>
+<script src="backup.js"></script>
+<script src="i18n.js"></script>
+<script src="tests/harness.js"></script>
+<script src="tests/fmt.test.js"></script>
+<script src="tests/workout.test.js"></script>
+<script src="tests/rules.test.js"></script>
+<script src="tests/library.test.js"></script>
+<script src="tests/engine.test.js"></script>
+<script src="tests/match.test.js"></script>
+<script src="tests/cases.test.js"></script>
+<script src="tests/rides.test.js"></script>
+<script src="tests/backup.test.js"></script>
+<script src="tests/i18n.test.js"></script>
+<script>
+  const c = { pass: 0, fail: 0, pending: 0 }, out = document.getElementById('out'), sum = document.getElementById('sum');
+  const esc = s => String(s).replace(/[&<>]/g, x => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[x]));
+  DFTest.run(r => {
+    c[r.status]++;
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="${r.status}">${r.status === 'pass' ? '✔ pass' : r.status === 'fail' ? '✘ FAIL' : '… pending'}</span> ${esc(r.name)}${r.msg ? `<pre>${esc(r.msg)}</pre>` : ''}`;
+    out.appendChild(li);
+  }).then(() => {
+    sum.innerHTML = `<span class="pass">${c.pass} passed</span> · <span class="fail">${c.fail} failed</span> · <span class="pending">${c.pending} pending</span>`;
+    document.title = `DynamFuel tests: ${c.pass} pass / ${c.fail} fail / ${c.pending} pending`;
+  });
+</script>
+</body>
+</html>
