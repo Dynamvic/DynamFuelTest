@@ -140,7 +140,8 @@
     let cafOff = null, cafOptional = false;
     const c3 = R['CAF-03'];
     const minor = profile.birthYear && ctx.rideYear ? (ctx.rideYear - profile.birthYear) <= R['CAF-04'].minAge : null;
-    if (minor == null) cafOff = 'noage';
+    if ((profile.healthFlags || []).includes('pregnancy') && R['CAF-07']) { cafOff = 'pregnancy'; cafRules.push('CAF-07'); }   // EFSA 2015
+    else if (minor == null) cafOff = 'noage';
     else if (minor) cafOff = 'minor';
     else if (profile.caffeine === 'none' || !profile.caffeine) cafOff = 'nouse';
     else if (!mass) cafOff = 'nomass';
@@ -159,10 +160,21 @@
         const cutoff = bed - R['CAF-06'].cutoffH * 60;                     // minutes after midnight (same day)
         for (let i = doses.length - 1; i >= 0; i--) if (st + doses[i].atMin > cutoff) { doses[i].dropped = 'bedtime'; }
       } else warnings.push('caf_notime');
+      // CAF-05 (EFSA 2015): every dose ≤ single maximum, the planned doses together ≤ daily maximum (rounded down to 25 mg)
+      const c5 = R['CAF-05'], step = rnd.cafMg;
+      let sum = 0;
+      doses.filter(d => !d.dropped).forEach(d => {
+        if (c5.singleMaxMg != null && d.mg > c5.singleMaxMg) { d.mg = Math.floor(c5.singleMaxMg / step) * step; d.capped = 'single'; }
+        if (c5.dailyMaxMg != null && sum + d.mg > c5.dailyMaxMg) { d.mg = Math.max(0, Math.floor((c5.dailyMaxMg - sum) / step) * step); d.capped = 'daily'; }
+        if (d.mg <= 0) d.dropped = 'daily';
+        sum += d.mg;
+      });
       doses.forEach(d => { if (st != null) d.clock = F.clock(st, d.atMin); });
     }
     cafRules.push('AGE-01', 'RND-01');
-    const caffeine = { on: !cafOff && !cafOptional, optional: cafOptional, off: cafOff, doses: doses.filter(d => !d.dropped), dropped: doses.filter(d => d.dropped), rules: cafRules, status: worst(R, cafRules) };
+    const kept = doses.filter(d => !d.dropped);
+    const caffeine = { on: !cafOff && !cafOptional, optional: cafOptional, off: cafOff, doses: kept, dropped: doses.filter(d => d.dropped),
+      totalMg: kept.reduce((a, d) => a + d.mg, 0), dailyMaxMg: R['CAF-05'].dailyMaxMg, rules: cafRules, status: worst(R, cafRules) };
 
     /* ---- pre-ride ---- */
     const p1 = R['PRE-01'], p2 = R['PRE-02'], st = F.toMin(ctx.start);
