@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.3.5';
+const APP_VERSION = '0.3.6';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -535,11 +535,12 @@ function ownDraft(id) {
 function vOwn(id) {
   const D = UI.own && UI.own.id === (id || null) ? UI.own : (UI.own = ownDraft(id));
   const u = D.unit, nf = (f, label, unit) => `<div class="fld"><label class="lbl" for="o-${f}">${label}</label><span class="tin"><input id="o-${f}" type="text" inputmode="decimal" data-own="${f}" value="${esc(ns(D[f]))}"><span>${unit}</span></span><span class="err">${UI.err['own_' + f] || ''}</span></div>`;
-  const scan = 'BarcodeDetector' in window && navigator.mediaDevices ? `<button class="btn" data-act="offscan">${t('own_scan')}</button>` : '';
+  const scan = canScan() ? `<button class="btn" data-act="offscan">${t('own_scan')}</button><button class="btn" data-act="offscanstop" hidden>${t('own_scan_stop')}</button>` : '';
   return `${topbar(id ? t('own_edit') : t('own_add'), '#stock')}
     <section class="card"><h2>${t('own_bar')}</h2><p class="small muted">${t('own_bar_l')}</p>
       <div class="row nowrap"><input id="offcode" class="grow wxq" type="text" inputmode="numeric" autocomplete="off" placeholder="${t('own_code')}" aria-label="${t('own_code')}" value="${esc(D.code || '')}">
-        <button class="btn" data-act="offsearch">${t('wx_search')}</button>${scan}</div>
+        <button class="btn" data-act="offsearch">${t('wx_search')}</button></div>
+      ${scan ? `<div class="row">${scan}</div>` : ''}
       <p class="msg${UI.offBad ? ' bad' : ''}" role="status">${esc(UI.offMsg || '')}</p><video id="offvideo" playsinline muted hidden style="width:100%;border-radius:12px"></video>
       <small class="muted">${t('own_off_attr')}</small></section>
     <section class="card">
@@ -582,23 +583,40 @@ async function offLookup(code) {
   } catch (e) { UI.offMsg = t('own_off_err'); UI.offBad = true; }
   rerender();
 }
+/* camera scan: the browser's own BarcodeDetector where it exists (Android Chrome), else DynamFuel's reader (ean.js) on the
+   camera picture (iPhone, desktop). The same code must be read twice in a row before it is used. Nothing leaves the phone. */
+const canScan = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+let scanStop = false;
 async function offScan() {
   const v = $('#offvideo'); if (!v) return;
-  let stream;
+  let stream; scanStop = false;
   try {
-    const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    let det = null;
+    if ('BarcodeDetector' in window) { try { det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }); } catch (e) { det = null; } }
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
     v.srcObject = stream; v.hidden = false; await v.play();
-    const t0 = Date.now();
-    while (Date.now() - t0 < 20000) {
-      const codes = await det.detect(v).catch(() => []);
-      if (codes.length) { stream.getTracks().forEach(x => x.stop()); v.hidden = true; return offLookup(codes[0].rawValue); }
-      await new Promise(r => setTimeout(r, 300));
+    UI.offMsg = t('own_scan_hint'); UI.offBad = false; const m = $('.msg'); if (m) m.textContent = UI.offMsg;
+    const stopBtn = $('[data-act=offscanstop]'); if (stopBtn) stopBtn.hidden = false;
+    const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    const t0 = Date.now(); let last = null;
+    while (Date.now() - t0 < 30000 && !scanStop) {
+      let code = null;
+      if (det) { const c = await det.detect(v).catch(() => []); code = c.length ? c[0].rawValue : null; }
+      else if (v.videoWidth) {
+        const W = Math.min(960, v.videoWidth), H = Math.round(v.videoHeight * W / v.videoWidth); cv.width = W; cv.height = H;
+        cx.drawImage(v, 0, 0, W, H);
+        const img = cx.getImageData(0, 0, W, H).data, grey = (x, y) => { const i = (y * W + x) * 4; return 0.299 * img[i] + 0.587 * img[i + 1] + 0.114 * img[i + 2]; };
+        for (let f = 0.3; f <= 0.7 && !code; f += 0.05) { const y = Math.round(H * f), r = new Float32Array(W); for (let x = 0; x < W; x++) r[x] = grey(x, y); code = DFEan.decodeRow(r); }
+        for (let f = 0.3; f <= 0.7 && !code; f += 0.1) { const x = Math.round(W * f), c = new Float32Array(H); for (let y = 0; y < H; y++) c[y] = grey(x, y); code = DFEan.decodeRow(c); }   // barcode held upright
+      }
+      if (code && (det || code === last)) { stream.getTracks().forEach(x => x.stop()); v.hidden = true; return offLookup(code); }
+      last = code;
+      await new Promise(r => setTimeout(r, det ? 300 : 120));
     }
-    UI.offMsg = t('own_scan_none'); UI.offBad = true;
+    if (!scanStop) { UI.offMsg = t('own_scan_none'); UI.offBad = true; }
   } catch (e) { UI.offMsg = t('own_scan_err'); UI.offBad = true; }
   if (stream) stream.getTracks().forEach(x => x.stop());
-  rerender();
+  v.hidden = true; rerender();
 }
 async function ownSave() {
   const D = UI.own;
@@ -883,6 +901,7 @@ document.addEventListener('click', async ev => {
   if (a === 'owntog' && UI.own) { const f = el.dataset.f, v = el.dataset.v, L = UI.own[f]; UI.own[f] = L.includes(v) ? L.filter(x => x !== v) : L.concat(v); return rerender(); }
   if (a === 'offsearch' && UI.own) return offLookup($('#offcode').value);
   if (a === 'offscan' && UI.own) return offScan();
+  if (a === 'offscanstop') { scanStop = true; return; }
   if (a === 'ownsave' && UI.own) return ownSave();
   if (a === 'owndel' && UI.own && UI.own.id) return sheet(`<h2>${t('own_del')}</h2><p>${esc(UI.own.name)}</p><button class="btn danger big wide" data-act="owndelgo">${t('own_del')}</button>`);
   if (a === 'owndelgo' && UI.own && UI.own.id) { const id = UI.own.id; STOCK.delete(id); await DB.del('items', id); closeSheet(); UI.own = null; location.hash = '#stock'; return; }
