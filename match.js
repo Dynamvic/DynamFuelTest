@@ -181,6 +181,10 @@
     if (best && !best.mtcOk) gaps.push({ what: 'mtc', glucoseOnlyGph: totals.glucoseOnlyGph, max: R['CHO-MTC-01'].glucoseOnlyMaxGph });
     if (naTotal < naLo - 1e-9 && nBottles > 0) gaps.push({ what: 'sodium', shortMg: F.roundTo(naLo - naTotal, rnd.naMg) });
     if (fluidGap > 0) gaps.push({ what: 'fluid', shortMl: fluidGap, refills });
+    // review #2: the plan's sodium above the advised range (NA-01 upper end × fluid) is reported, not hidden (warning only;
+    // the plan itself is not changed – carbohydrate comes first)
+    if (!T.sodium.none && naHi > 0 && F.roundTo(naTotal, rnd.naMg) > F.roundTo(naHi, rnd.naMg))
+      notes.push({ key: 'sodium_high', p: { mgph: totals.naMgph, hi: T.sodium.hi } });
     const shopping = suggest(gaps, items, avail, profile, rules, T, hours);
 
     /* ---- schedule ---- */

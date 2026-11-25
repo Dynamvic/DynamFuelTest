@@ -1,0 +1,47 @@
+{
+  "app": "dynamfuel",
+  "kind": "food",
+  "version": "0.1.0",
+  "checked": "25-11-2026",
+  "note": "Real food (decision P3-1). Values per 100 g from NEVO (RIVM), read on nevo-online.rivm.nl on 25-11-2026. Portion weights only where a source gives one (USDA FoodData Central); otherwise null = the athlete enters the weight of their own piece. Glucose+fructose (mtc) only where USDA gives the sugar profile; null = not known (the matcher then counts it as glucose-only, the safe side). Allergens: null = not known (excluded for athletes with allergies).",
+  "sources": {
+    "NEVO2025": { "cite": "RIVM. NEVO-online versie 2025/9.0. Rijksinstituut voor Volksgezondheid en Milieu, Bilthoven.", "url": "https://nevo-online.rivm.nl/" },
+    "USDA-SR": { "cite": "U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, SR Legacy.", "url": "https://fdc.nal.usda.gov/" }
+  },
+  "items": [
+    { "id": "food-banana", "name": { "nl": "Banaan", "en": "Banana" }, "unit": { "nl": "bananen", "en": "bananas" },
+      "parts": [ { "label": { "nl": "banaan (zonder schil)", "en": "banana (peeled)" }, "ref": "NEVO2025 151 Banaan",
+        "per100": { "kcal": 92, "choG": 20, "sugarsG": 15.5, "proteinG": 1.1, "fatG": 0.3, "fibreG": 1.9, "sodiumMg": 0 },
+        "g": 118, "gSource": "USDA FDC 173944 Bananas, raw: 1 medium (7 to 7 7/8 inch) = 118 g" } ],
+      "mtc": true, "mtcBasis": "USDA FDC 173944: glucose 4,98, fructose 4,85, sucrose 2,39, starch 5,38 g per 100 g",
+      "allergens": [], "allergensComplete": true, "allergenBasis": "single ingredient fruit, none of the 14 EU allergens" },
+    { "id": "food-dates", "name": { "nl": "Dadels gedroogd", "en": "Dates, dried" }, "unit": { "nl": "dadels", "en": "dates" },
+      "parts": [ { "label": { "nl": "1 dadel (zonder pit)", "en": "1 date (pitted)" }, "ref": "NEVO2025 181 Dadels gedroogd",
+        "per100": { "kcal": 305, "choG": 70.5, "sugarsG": 70.5, "proteinG": 2, "fatG": 0, "fibreG": 7.5, "sodiumMg": 10 },
+        "g": 7.1, "gSource": "USDA FDC 171726 Dates, deglet noor: 1 date, pitted = 7,1 g (Medjool, FDC 168191: 24 g – change the weight)" } ],
+      "mtc": true, "mtcBasis": "USDA FDC 171726 (deglet noor): glucose 19,87, fructose 19,56, sucrose 23,84 g per 100 g",
+      "allergens": [], "allergensComplete": true, "allergenBasis": "single ingredient fruit, none of the 14 EU allergens" },
+    { "id": "food-rijsttaartje", "name": { "nl": "Rijsttaartje", "en": "Rice tart (rijsttaartje)" }, "unit": { "nl": "stuks", "en": "pieces" },
+      "parts": [ { "label": { "nl": "rijsttaartje", "en": "rice tart" }, "ref": "NEVO2025 489 Vlaai rijste- (flan filled with rice pudding) – closest NEVO item for a Belgian rijsttaartje (coach decision 25-11-2026)",
+        "per100": { "kcal": 211, "choG": 34.5, "sugarsG": 17.5, "proteinG": 4.5, "fatG": 6, "fibreG": 0.7, "sodiumMg": 262 },
+        "g": null, "gSource": null } ],
+      "mtc": null, "allergens": null, "allergensComplete": false },
+    { "id": "food-ontbijtkoek", "name": { "nl": "Ontbijtkoek", "en": "Dutch spiced cake (ontbijtkoek)" }, "unit": { "nl": "sneden", "en": "slices" },
+      "parts": [ { "label": { "nl": "1 snede", "en": "1 slice" }, "ref": "NEVO2025 240 Koek ontbijt-",
+        "per100": { "kcal": 308, "choG": 69.5, "sugarsG": 37.3, "proteinG": 3, "fatG": 1.2, "fibreG": 3.6, "sodiumMg": 232 },
+        "g": null, "gSource": null } ],
+      "mtc": null, "allergens": null, "allergensComplete": false },
+    { "id": "food-luikse-wafel", "name": { "nl": "Luikse suikerwafel", "en": "Liège sugar waffle" }, "unit": { "nl": "wafels", "en": "waffles" },
+      "parts": [ { "label": { "nl": "1 wafel", "en": "1 waffle" }, "ref": "NEVO2025 2661 Wafel Luikse- (average of O'Lacy, Albert Heijn, Lotus and Bellbake)",
+        "per100": { "kcal": 446, "choG": 57.1, "sugarsG": 29.5, "proteinG": 5.7, "fatG": 21.3, "fibreG": 1.5, "sodiumMg": 270 },
+        "g": null, "gSource": null } ],
+      "mtc": null, "allergens": null, "allergensComplete": false },
+    { "id": "food-sandwich-jam", "name": { "nl": "Boterham wit met jam", "en": "White bread with jam" }, "unit": { "nl": "boterhammen", "en": "slices" },
+      "parts": [
+        { "label": { "nl": "wit brood (1 snede)", "en": "white bread (1 slice)" }, "ref": "NEVO2025 2351 Tarwebrood wit gem v melk- en waterwit",
+          "per100": { "kcal": 250, "choG": 48.1, "sugarsG": 2.3, "proteinG": 9.1, "fatG": 1.7, "fibreG": 2.6, "sodiumMg": 408 }, "g": null, "gSource": null },
+        { "label": { "nl": "jam", "en": "jam" }, "ref": "NEVO2025 445 Jam",
+          "per100": { "kcal": 248, "choG": 60.8, "sugarsG": 51.2, "proteinG": 0.3, "fatG": 0.1, "fibreG": 1.2, "sodiumMg": 10 }, "g": null, "gSource": null } ],
+      "mtc": null, "allergens": null, "allergensComplete": false }
+  ]
+}

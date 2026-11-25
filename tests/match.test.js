@@ -36,6 +36,16 @@
     assert.ok(d, 'a drink bottle is used'); assert.equal(d.doses, 1.5); assert.equal(d.powderG, 75);
   });
 
+  test('match: sodium above the advised range is reported (review #2), the plan itself stays', async () => {
+    const rules = await load('data/rules.json'), profile = Object.assign({}, P);
+    const T = E.plan({ parsed: W.parse(await load('tests/fixtures/Duur_3u_2026-11-28.json')), ctx: { rideYear: 2026, start: '09:00', goalTag: 'endurance', indoor: true }, profile, rules });
+    const items = ITEMS.concat([{ id: 'gel-na', category: 'gel', choG: 45, mtc: true, sodiumMg: 900, allergens: [], traces: [] }]);
+    const hi = M.match({ targets: T, items, stock: [{ id: 'gel-na', qty: 10 }], profile, ctx: { indoor: true }, rules });
+    assert.ok(hi.within); assert.ok(hi.notes.some(n => n.key === 'sodium_high'), '6 gels × 900 mg = 5400 mg > 3 h × 400 mg/h');
+    const lo = M.match({ targets: T, items, stock: [{ id: 'gel-x', qty: 12 }], profile, ctx: { indoor: true }, rules });
+    assert.ok(!lo.notes.some(n => n.key === 'sodium_high'), 'low-sodium gels: no warning');
+  });
+
   test('match: bottles must fit the cages outdoors; refill stops add capacity; indoor has no limit', async () => {
     const st = [{ id: 'gel-a', qty: 10 }];
     const a = await build('Duur_3u_2026-11-28', { goalTag: 'endurance' }, {}, st);

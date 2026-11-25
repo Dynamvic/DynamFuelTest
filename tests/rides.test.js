@@ -18,7 +18,7 @@
     assert.equal(r.id, 'icu-1'); assert.equal(r.date, '2026-12-01'); assert.equal(r.time, '09:00'); assert.equal(r.goalTag, 'race');
     assert.ok(r.structured); assert.equal(r.durationS, 18000); assert.equal(r.indoor, null);
     assert.equal(R.eventToRide(ev({ type: 'VirtualRide' })).indoor, true, 'VirtualRide = indoor');
-    assert.equal(R.eventToRide(ev({ indoor: false })).indoor, false);
+    assert.equal(R.eventToRide(ev({ indoor: false })).indoor, null, 'false is the Intervals.icu default: ask');
     const u = R.eventToRide(ev({ start_date_local: '2026-12-01T00:00:00' }));
     assert.equal(u.time, null); assert.ok(!u.structured); assert.equal(u.durationS, 18000, 'no steps: moving_time');
   });
@@ -40,23 +40,25 @@
     assert.deepEqual(W.metrics(p, { hardPct: 90 }).tiz, W.metrics(q, { hardPct: 90 }).tiz);
   });
 
-  test('rides: a ride without steps gets one step in the zone of its session type (recovery Z1, endurance Z2, key/race Z4)', async () => {
+  test('rides: a ride without steps gets one step in the zone of its session type (recovery Z1, endurance Z2, key Z4, race Z4–Z5)', async () => {
     const R = req('rides.js'), W = req('workout.js');
     const r = R.eventToRide(ev({ moving_time: 7200 }));
-    [['recovery', 1], ['endurance', 2], ['key', 4], ['race', 4]].forEach(([g, z]) => {
+    [['recovery', 1], ['endurance', 2], ['key', 4], ['race', '4–5']].forEach(([g, z]) => {
       const d = R.workoutDoc(r, null, { ftpW: 300 }, g);
       assert.ok(d.manual); assert.equal(d.manualZone, z); assert.ok(W.parse(d).ok, g);
     });
   });
 
-  test('rides: rides without blocks follow MAN-01 (endurance, coach), MAN-02 (recovery, proposed), MAN-03 (key/race, OPEN)', async () => {
+  test('rides: rides without blocks follow MAN-01 (endurance Z2), MAN-02 (recovery Z1), MAN-03 (key, OPEN), MAN-04 (race Z4–Z5)', async () => {
     const R = req('rides.js'), rules = (await load('data/rules.json')).rules;
     const r = R.eventToRide(ev({ moving_time: 5400 }));
-    [['endurance', 'MAN-01', 'coach'], ['recovery', 'MAN-02', 'proposed'], ['key', 'MAN-03', 'open'], ['race', 'MAN-03', 'open']].forEach(([g, id, st]) => {
-      const d = R.workoutDoc(r, null, {}, g, rules);
-      assert.equal(d.manualRule, id, g); assert.equal(rules[id].status, st, id); assert.equal(d.manualZone, rules[id].zones[g]);
-      assert.equal(R.MANUAL_ZONE[g], rules[id].zones[g], `fallback table = ${id}`);
+    [['endurance', 'MAN-01', 'coach'], ['recovery', 'MAN-02', 'coach'], ['key', 'MAN-03', 'open'], ['race', 'MAN-04', 'coach']].forEach(([g, id, st]) => {
+      const d = R.workoutDoc(r, null, {}, g, rules), z = rules[id].zones[g];
+      assert.equal(d.manualRule, id, g); assert.equal(rules[id].status, st, id); assert.equal(String(d.manualZone), Array.isArray(z) ? z.join('–') : String(z));
+      assert.deepEqual(R.MANUAL_ZONE[g], z, `fallback table = ${id}`);
     });
+    const W = req('workout.js'), race = W.parse(R.workoutDoc(r, { zones: [55, 75, 90, 105, 120, 150, 999] }, {}, 'race', rules));
+    assert.ok(race.ok); assert.equal(race.steps[0].lo, 90); assert.equal(race.steps[0].hi, 120); assert.equal(race.steps[0].a, 105, 'race Z4–Z5: middle 105 % FTP');
   });
 
   test('rides: "next session within 8 h" from the calendar (REC-01); sessions without a time are ignored', async () => {

@@ -346,7 +346,10 @@
     pack_water: '{n}× bidon water ({ml} ml)', pack_refill: 'Onderweg bij te vullen: {n} bidons (neem het poeder mee).', pack_refill_water: 'Onderweg bij te vullen: {n} bidons.', pack_total: 'Samen: {c} g{H} koolhydraten · {na} mg{H} natrium',
     pack_strong: 'Sterke drank ({g} g/l): drink er water bij.', gap_cho_short: 'Je voorraad is te klein: nog {g} g koolhydraten nodig.', gap_cho_over: 'Met hele porties kom je {g} g boven je doel.',
     gap_mtc: 'Te veel koolhydraten uit alleen glucose ({g} g/u, max {max}): kies producten met fructose.', gap_na: 'Nog {mg} mg natrium te weinig: neem zout of elektrolyttabletten.',
-    gap_fluid: 'Te weinig bidons voor {ml} ml: plan een stop om bij te vullen.', shop: 'Om aan te vullen', slot_only_drink: 'drinken'
+    gap_fluid: 'Te weinig bidons voor {ml} ml: plan een stop om bij te vullen.', shop: 'Om aan te vullen', slot_only_drink: 'drinken',
+    na_high: 'Dit plan geeft ± {mg} mg{H} natrium, meer dan de aangeraden {hi} mg{H}. Kies eventueel producten met minder natrium.',
+    iw_restore_fail: 'Je training veranderde en terugzetten lukte niet. Controleer de training in Intervals.icu; je oorspronkelijke beschrijving staat hieronder.',
+    iw_nothing: 'Er staat geen DynamFuel-blok in deze training: niets gewijzigd.'
   });
   Object.assign(en, {
     tab_stock: 'Stock', stock_t: 'Stock', stock_l: 'Mark what you have at home and how much. The app only chooses from what is in stock.',
@@ -363,7 +366,10 @@
     pack_water: '{n}× bottle of water ({ml} ml)', pack_refill: 'To refill on the way: {n} bottles (take the powder with you).', pack_refill_water: 'To refill on the way: {n} bottles.', pack_total: 'Together: {c} g{H} carbohydrate · {na} mg{H} sodium',
     pack_strong: 'Strong drink ({g} g/l): drink water with it.', gap_cho_short: 'Your stock is too small: {g} g carbohydrate still needed.', gap_cho_over: 'With whole servings you end {g} g above your target.',
     gap_mtc: 'Too much carbohydrate from glucose only ({g} g/h, max {max}): choose products with fructose.', gap_na: '{mg} mg sodium short: take salt or electrolyte tablets.',
-    gap_fluid: 'Not enough bottles for {ml} ml: plan a stop to refill.', shop: 'To restock', slot_only_drink: 'drink'
+    gap_fluid: 'Not enough bottles for {ml} ml: plan a stop to refill.', shop: 'To restock', slot_only_drink: 'drink',
+    na_high: 'This plan gives about {mg} mg{H} sodium, more than the advised {hi} mg{H}. Consider products with less sodium.',
+    iw_restore_fail: 'Your workout changed and restoring it failed. Check the workout in Intervals.icu; your original description is below.',
+    iw_nothing: 'There is no DynamFuel block in this workout: nothing changed.'
   });
   Object.assign(nl, {
     set_wx: 'Weersvoorspelling', set_wx_l: 'Typ je gemeente: voor buitenritten in de komende 16 dagen neemt de app de hoogste voorspelde temperatuur tijdens je rit. Alleen de naam van je gemeente gaat naar Open-Meteo, geen GPS.',
@@ -414,6 +420,7 @@
     iw_send: 'Zet in Intervals.icu', iw_remove: 'Uit Intervals.icu halen', iw_preview: 'Wat er in Intervals.icu komt',
     iw_not_sent: 'Nog niet in Intervals.icu.', iw_sent: 'In Intervals.icu gezet op {d} om {t}.', iw_changed: 'Je plan is veranderd sinds je het in Intervals.icu zette: zet het opnieuw.',
     iw_done: 'In Intervals.icu gezet.', iw_removed: 'Uit Intervals.icu gehaald.', iw_restored: 'Intervals.icu paste de training aan: je oude beschrijving is teruggezet. Verwittig je coach.',
+    iw_markers: 'De beschrijving bevat een losse [DynamFuel]-markering: DynamFuel schrijft niets. Vraag je coach die markering weg te halen.',
     iw_targets: '{c} g{H} koolhydraten · {f} ml{H} · {n} mg{H} natrium', iw_at: 'om {clock}', iw_pack: 'Mee', iw_times: 'Eten', iw_drink: 'Drinken: ± {ml} ml elke {every} min', stk_drink: 'drinken ± {ml} ml / {every} min', stk_eat: 'eten'
   });
   Object.assign(en, {
@@ -421,6 +428,7 @@
     iw_send: 'Put in Intervals.icu', iw_remove: 'Remove from Intervals.icu', iw_preview: 'What goes into Intervals.icu',
     iw_not_sent: 'Not in Intervals.icu yet.', iw_sent: 'Put in Intervals.icu on {d} at {t}.', iw_changed: 'Your plan changed since you put it in Intervals.icu: put it again.',
     iw_done: 'Put in Intervals.icu.', iw_removed: 'Removed from Intervals.icu.', iw_restored: 'Intervals.icu changed the workout: your old description was put back. Tell your coach.',
+    iw_markers: 'The description contains a stray [DynamFuel] marker: DynamFuel writes nothing. Ask your coach to remove that marker.',
     iw_targets: '{c} g{H} carbohydrate · {f} ml{H} · {n} mg{H} sodium', iw_at: 'at {clock}', iw_pack: 'Take', iw_times: 'Eat', iw_drink: 'Drink: ± {ml} ml every {every} min', stk_drink: 'drink ± {ml} ml / {every} min', stk_eat: 'eat'
   });  Object.assign(rnl, {
     'MATCH-01': 'Hele porties uit je voorraad, binnen {choTolPct} % van je doel, met hoogstens {maxDistinct} soorten producten naast drank (regel van je coach).',

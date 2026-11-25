@@ -1,0 +1,1025 @@
+[
+    {
+        "id":  160524981,
+        "start_date_local":  "2026-11-25T00:00:00",
+        "type":  "Ride",
+        "category":  "WORKOUT",
+        "name":  "Treshold Shutlle 2x8 30/30",
+        "moving_time":  2400,
+        "icu_training_load":  40,
+        "tags":  null,
+        "indoor":  false,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+                                          {
+                                              "duration":  300,
+                                              "power":  {
+                                                            "value":  60,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  150.0,
+                                                             "start":  146.0,
+                                                             "end":  154.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  30,
+                                              "power":  {
+                                                            "value":  80,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  200.0,
+                                                             "start":  195.0,
+                                                             "end":  205.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  30,
+                                              "power":  {
+                                                            "value":  90,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  225.0,
+                                                             "start":  219.0,
+                                                             "end":  231.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  30,
+                                              "power":  {
+                                                            "value":  100,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  250.0,
+                                                             "start":  243.0,
+                                                             "end":  257.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  30,
+                                              "power":  {
+                                                            "value":  110,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  275.0,
+                                                             "start":  268.0,
+                                                             "end":  282.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  120,
+                                              "power":  {
+                                                            "value":  1,
+                                                            "units":  "power_zone"
+                                                        },
+                                              "_power":  {
+                                                             "start":  110.0,
+                                                             "end":  137.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  60,
+                                              "power":  {
+                                                            "value":  125,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  312.0,
+                                                             "start":  304.0,
+                                                             "end":  320.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  120,
+                                              "power":  {
+                                                            "value":  1,
+                                                            "units":  "power_zone"
+                                                        },
+                                              "_power":  {
+                                                             "start":  110.0,
+                                                             "end":  137.0
+                                                         }
+                                          },
+                                          {
+                                              "text":  "8x",
+                                              "duration":  480,
+                                              "distance":  0.0,
+                                              "reps":  8,
+                                              "steps":  [
+                                                            {
+                                                                "duration":  30,
+                                                                "power":  {
+                                                                              "value":  105,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  262.0,
+                                                                               "start":  255.0,
+                                                                               "end":  269.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  30,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  146.0,
+                                                                               "end":  154.0
+                                                                           }
+                                                            }
+                                                        ]
+                                          },
+                                          {
+                                              "duration":  240,
+                                              "power":  {
+                                                            "value":  55,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  137.0,
+                                                             "start":  133.0,
+                                                             "end":  141.0
+                                                         }
+                                          },
+                                          {
+                                              "text":  "8x",
+                                              "duration":  480,
+                                              "distance":  0.0,
+                                              "reps":  8,
+                                              "steps":  [
+                                                            {
+                                                                "duration":  30,
+                                                                "power":  {
+                                                                              "value":  105,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  262.0,
+                                                                               "start":  255.0,
+                                                                               "end":  269.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  30,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  146.0,
+                                                                               "end":  154.0
+                                                                           }
+                                                            }
+                                                        ]
+                                          },
+                                          {
+                                              "duration":  240,
+                                              "power":  {
+                                                            "value":  55,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  137.0,
+                                                             "start":  133.0,
+                                                             "end":  141.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  60,
+                                              "power":  {
+                                                            "value":  80,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  200.0,
+                                                             "start":  195.0,
+                                                             "end":  205.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  60,
+                                              "power":  {
+                                                            "value":  70,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  175.0,
+                                                             "start":  170.0,
+                                                             "end":  180.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  60,
+                                              "power":  {
+                                                            "value":  60,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  150.0,
+                                                             "start":  146.0,
+                                                             "end":  154.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  60,
+                                              "power":  {
+                                                            "value":  50,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  125.0,
+                                                             "start":  121.0,
+                                                             "end":  129.0
+                                                         }
+                                          }
+                                      ],
+                            "duration":  2400
+                        }
+    },
+    {
+        "id":  155687355,
+        "start_date_local":  "2026-11-25T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Mobiliteit \u0026 herstel",
+        "moving_time":  1740,
+        "icu_training_load":  15,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  155687354,
+        "start_date_local":  "2026-11-26T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Romp \u0026 kracht",
+        "moving_time":  1860,
+        "icu_training_load":  25,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  160525233,
+        "start_date_local":  "2026-11-27T00:00:00",
+        "type":  "Ride",
+        "category":  "WORKOUT",
+        "name":  "2. Indoor microbursts - 1",
+        "moving_time":  3600,
+        "icu_training_load":  43,
+        "tags":  null,
+        "indoor":  false,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+                                          {
+                                              "text":  "Inrijden",
+                                              "duration":  600,
+                                              "ramp":  true,
+                                              "power":  {
+                                                            "start":  50,
+                                                            "end":  68,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  147.5,
+                                                             "start":  125.0,
+                                                             "end":  170.0
+                                                         }
+                                          },
+                                          {
+                                              "text":  "Activatie 4x",
+                                              "duration":  360,
+                                              "distance":  0.0,
+                                              "reps":  4,
+                                              "steps":  [
+                                                            {
+                                                                "text":  "Aan",
+                                                                "duration":  30,
+                                                                "power":  {
+                                                                              "value":  85,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  212.0,
+                                                                               "start":  206.0,
+                                                                               "end":  218.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "text":  "Rustig",
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  146.0,
+                                                                               "end":  154.0
+                                                                           }
+                                                            }
+                                                        ]
+                                          },
+                                          {
+                                              "text":  "Rustig",
+                                              "duration":  180,
+                                              "power":  {
+                                                            "value":  62,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  155.0,
+                                                             "start":  151.0,
+                                                             "end":  159.0
+                                                         }
+                                          },
+                                          {
+                                              "text":  "Blok 1 10x",
+                                              "duration":  600,
+                                              "distance":  0.0,
+                                              "reps":  10,
+                                              "steps":  [
+                                                            {
+                                                                "text":  "Versnelling",
+                                                                "duration":  5,
+                                                                "power":  {
+                                                                              "value":  130,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  325.0,
+                                                                               "start":  316.0,
+                                                                               "end":  334.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "text":  "Rustig",
+                                                                "duration":  55,
+                                                                "power":  {
+                                                                              "value":  63,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  157.0,
+                                                                               "start":  153.0,
+                                                                               "end":  161.0
+                                                                           }
+                                                            }
+                                                        ]
+                                          },
+                                          {
+                                              "text":  "Tussenblok",
+                                              "duration":  180,
+                                              "power":  {
+                                                            "value":  60,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  150.0,
+                                                             "start":  146.0,
+                                                             "end":  154.0
+                                                         }
+                                          },
+                                          {
+                                              "text":  "Blok 2 10x",
+                                              "duration":  600,
+                                              "distance":  0.0,
+                                              "reps":  10,
+                                              "steps":  [
+                                                            {
+                                                                "text":  "Versnelling",
+                                                                "duration":  5,
+                                                                "power":  {
+                                                                              "value":  130,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  325.0,
+                                                                               "start":  316.0,
+                                                                               "end":  334.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "text":  "Rustig",
+                                                                "duration":  55,
+                                                                "power":  {
+                                                                              "value":  63,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  157.0,
+                                                                               "start":  153.0,
+                                                                               "end":  161.0
+                                                                           }
+                                                            }
+                                                        ]
+                                          },
+                                          {
+                                              "text":  "Tussenblok",
+                                              "duration":  180,
+                                              "power":  {
+                                                            "value":  60,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  150.0,
+                                                             "start":  146.0,
+                                                             "end":  154.0
+                                                         }
+                                          },
+                                          {
+                                              "text":  "Blok 3 10x",
+                                              "duration":  600,
+                                              "distance":  0.0,
+                                              "reps":  10,
+                                              "steps":  [
+                                                            {
+                                                                "text":  "Versnelling",
+                                                                "duration":  5,
+                                                                "power":  {
+                                                                              "value":  130,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  325.0,
+                                                                               "start":  316.0,
+                                                                               "end":  334.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "text":  "Rustig",
+                                                                "duration":  55,
+                                                                "power":  {
+                                                                              "value":  63,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  157.0,
+                                                                               "start":  153.0,
+                                                                               "end":  161.0
+                                                                           }
+                                                            }
+                                                        ]
+                                          },
+                                          {
+                                              "text":  "Uitrijden",
+                                              "duration":  300,
+                                              "ramp":  true,
+                                              "power":  {
+                                                            "start":  60,
+                                                            "end":  50,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  137.5,
+                                                             "start":  150.0,
+                                                             "end":  125.0
+                                                         }
+                                          }
+                                      ],
+                            "duration":  3600
+                        }
+    },
+    {
+        "id":  157384178,
+        "start_date_local":  "2026-11-28T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Romp \u0026 kracht",
+        "moving_time":  1860,
+        "icu_training_load":  25,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  160171890,
+        "start_date_local":  "2026-11-29T00:00:00",
+        "type":  "Ride",
+        "category":  "WORKOUT",
+        "name":  "Koers 150m",
+        "moving_time":  9000,
+        "icu_training_load":  225,
+        "tags":  null,
+        "indoor":  false,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+                                          {
+                                              "duration":  9000,
+                                              "power":  {
+                                                            "value":  95,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  237.0,
+                                                             "start":  231.0,
+                                                             "end":  243.0
+                                                         }
+                                          }
+                                      ],
+                            "duration":  9000
+                        }
+    },
+    {
+        "id":  155687358,
+        "start_date_local":  "2026-11-30T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Mobiliteit \u0026 herstel",
+        "moving_time":  1740,
+        "icu_training_load":  15,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  155688269,
+        "start_date_local":  "2026-12-01T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Groepssessie · Benen",
+        "moving_time":  3600,
+        "icu_training_load":  56,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  160525411,
+        "start_date_local":  "2026-12-02T00:00:00",
+        "type":  "Ride",
+        "category":  "WORKOUT",
+        "name":  "Double Tempo Piramid",
+        "moving_time":  5160,
+        "icu_training_load":  77,
+        "tags":  null,
+        "indoor":  true,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+                                          {
+                                              "duration":  300,
+                                              "power":  {
+                                                            "value":  55,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  137.0,
+                                                             "start":  137.0,
+                                                             "end":  137.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  300,
+                                              "power":  {
+                                                            "value":  65,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  162.0,
+                                                             "start":  162.0,
+                                                             "end":  162.0
+                                                         }
+                                          },
+                                          {
+                                              "text":  "2x",
+                                              "duration":  3960,
+                                              "distance":  0.0,
+                                              "reps":  2,
+                                              "steps":  [
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  120,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  180,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  240,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  300,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  240,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  180,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  120,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  60,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  150.0,
+                                                                               "start":  150.0,
+                                                                               "end":  150.0
+                                                                           }
+                                                            },
+                                                            {
+                                                                "duration":  60,
+                                                                "power":  {
+                                                                              "value":  80,
+                                                                              "units":  "%ftp"
+                                                                          },
+                                                                "_power":  {
+                                                                               "value":  200.0,
+                                                                               "start":  200.0,
+                                                                               "end":  200.0
+                                                                           }
+                                                            }
+                                                        ]
+                                          },
+                                          {
+                                              "duration":  300,
+                                              "power":  {
+                                                            "value":  65,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  162.0,
+                                                             "start":  162.0,
+                                                             "end":  162.0
+                                                         }
+                                          },
+                                          {
+                                              "duration":  300,
+                                              "power":  {
+                                                            "value":  55,
+                                                            "units":  "%ftp"
+                                                        },
+                                              "_power":  {
+                                                             "value":  137.0,
+                                                             "start":  137.0,
+                                                             "end":  137.0
+                                                         }
+                                          }
+                                      ],
+                            "duration":  5160
+                        }
+    },
+    {
+        "id":  155687357,
+        "start_date_local":  "2026-12-03T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Romp \u0026 kracht",
+        "moving_time":  1920,
+        "icu_training_load":  26,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  160525311,
+        "start_date_local":  "2026-12-04T00:00:00",
+        "type":  "Ride",
+        "category":  "WORKOUT",
+        "name":  "Duur - 3u",
+        "moving_time":  10800,
+        "icu_training_load":  128,
+        "tags":  null,
+        "indoor":  false,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+                                          {
+                                              "duration":  10800,
+                                              "power":  {
+                                                            "value":  2,
+                                                            "units":  "power_zone"
+                                                        },
+                                              "_power":  {
+                                                             "start":  138.0,
+                                                             "end":  187.0
+                                                         }
+                                          }
+                                      ],
+                            "duration":  10800
+                        }
+    },
+    {
+        "id":  157384180,
+        "start_date_local":  "2026-12-05T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Romp \u0026 kracht",
+        "moving_time":  1800,
+        "icu_training_load":  25,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  160525361,
+        "start_date_local":  "2026-12-06T00:00:00",
+        "type":  "Ride",
+        "category":  "WORKOUT",
+        "name":  "Duur - 5u",
+        "moving_time":  18000,
+        "icu_training_load":  213,
+        "tags":  null,
+        "indoor":  false,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+                                          {
+                                              "duration":  18000,
+                                              "power":  {
+                                                            "value":  2,
+                                                            "units":  "power_zone"
+                                                        },
+                                              "_power":  {
+                                                             "start":  138.0,
+                                                             "end":  187.0
+                                                         }
+                                          }
+                                      ],
+                            "duration":  18000
+                        }
+    },
+    {
+        "id":  155687361,
+        "start_date_local":  "2026-12-07T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Mobiliteit \u0026 herstel",
+        "moving_time":  1680,
+        "icu_training_load":  14,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    },
+    {
+        "id":  155688270,
+        "start_date_local":  "2026-12-08T19:00:00",
+        "type":  "WeightTraining",
+        "category":  "WORKOUT",
+        "name":  "DynamCore · Groepssessie · Benen",
+        "moving_time":  3600,
+        "icu_training_load":  56,
+        "tags":  null,
+        "indoor":  null,
+        "carbs_per_hour":  null,
+        "icu_ftp":  null,
+        "description":  "sample",
+        "workout_doc":  {
+                            "steps":  [
+
+                                      ],
+                            "duration":  0
+                        }
+    }
+]

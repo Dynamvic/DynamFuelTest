@@ -105,6 +105,8 @@
       fRules.push('FLU-01', 'FLU-05');
       const h2 = R['HEAT-02'];                                             // case 07 review E1: hot day → 750 ml/h
       if (ctx.tempC != null && ctx.tempC !== '' && +ctx.tempC >= h2.hotC) { fLph = h2.lph; fRules.push('HEAT-02'); }
+      // FLU-03: a known sweat rate is always the ceiling, also when FLU-04 cannot be used (no body mass) – review #1
+      if (sweat != null) { fLph = Math.min(fLph, sweat); fLo = Math.min(fLo, sweat); fHi = Math.min(fHi, sweat); fRules.push('FLU-03'); }
     }
     if (ctx.indoor) fRules.push('FLU-06');
     // McCubbin 2020: with a temperature the app advises cool drinks; the sweat test is asked once (profile), not per ride (E1)
@@ -154,10 +156,12 @@
       doses.push({ atMin: -c1.beforeMin, mg: F.roundTo(c1.mgkg * mass, rnd.cafMg), mgkg: c1.mgkg, rule: 'CAF-01' });
       cafRules.push('CAF-01');
       if (durMin > c2.minDurationMin) { doses.push({ atMin: Math.round(durMin * c2.atFraction), mg: F.roundTo(c2.mgkg * mass, rnd.cafMg), mgkg: c2.mgkg, rule: 'CAF-02' }); cafRules.push('CAF-02'); }
-      const st = F.toMin(ctx.start), bed = F.toMin(profile.bedtime);
+      const st = F.toMin(ctx.start), bed0 = F.toMin(profile.bedtime);
+      // a bedtime before noon (e.g. 00:30) is after midnight: count it on the next day (review #3)
+      const bed = bed0 != null && bed0 < 12 * 60 ? bed0 + 24 * 60 : bed0;
       if (st != null && bed != null) {
         cafRules.push('CAF-06');
-        const cutoff = bed - R['CAF-06'].cutoffH * 60;                     // minutes after midnight (same day)
+        const cutoff = bed - R['CAF-06'].cutoffH * 60;                     // minutes after midnight of the ride day
         for (let i = doses.length - 1; i >= 0; i--) if (st + doses[i].atMin > cutoff) { doses[i].dropped = 'bedtime'; }
       } else warnings.push('caf_notime');
       // CAF-05 (EFSA 2015): every dose ≤ single maximum, the planned doses together ≤ daily maximum (rounded down to 25 mg)

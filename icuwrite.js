@@ -14,14 +14,22 @@
   const START = '[DynamFuel]', END = '[/DynamFuel]';
   const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const BLOCK = new RegExp(`\\n*${esc(START)}[\\s\\S]*?${esc(END)}\\n*`, 'g');
+  const count = (s, m) => String(s || '').split(m).length - 1;
 
   /* a line that Intervals.icu cannot mistake for a workout step */
   const safeLine = s => '• ' + String(s).replace(/[\r\n]+/g, ' ').replace(/\[\/?DynamFuel\]/gi, '').trim();
   function buildBlock(lines) { return [START, ...lines.filter(Boolean).map(safeLine), END].join('\n'); }
-  /* description without DynamFuel's block (the rest untouched, only blank lines at the seam trimmed) */
-  function stripBlock(desc) { return String(desc || '').replace(BLOCK, '\n\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+|\n+$/g, ''); }
-  function hasBlock(desc) { return new RegExp(esc(START)).test(String(desc || '')); }
-  function withBlock(desc, block) { const base = stripBlock(desc); return (base ? base + '\n\n' : '') + block; }
+  /* description without DynamFuel's block. Only the blank lines directly around the block (the seam) change; the rest of
+     the coach's text stays byte for byte the same (review #5) */
+  function stripBlock(desc) {
+    const s = String(desc || '');
+    return s.replace(BLOCK, (m, off) => { const before = s.slice(0, off), after = s.slice(off + m.length); return before && after ? '\n\n' : ''; });
+  }
+  /* true only for a complete block (start and end marker) */
+  function hasBlock(desc) { return new RegExp(`${esc(START)}[\\s\\S]*?${esc(END)}`).test(String(desc || '')); }
+  /* false when the markers do not pair up (e.g. a "[DynamFuel]" typed by the coach): then the app writes nothing (review #8) */
+  function markersOk(desc) { const a = count(desc, START), b = count(desc, END); return a === b && a <= 1; }
+  function withBlock(desc, block) { const base = stripBlock(desc).replace(/\n+$/, ''); return (base ? base + '\n\n' : '') + block; }
 
   /* carbs_per_hour (decision 3): fill only when empty or when it still holds the value DynamFuel wrote before */
   function carbsToSend(current, lastSent, target) {
@@ -30,12 +38,16 @@
     return undefined;
   }
   /* what must not change when only the description is written */
+  /* the whole step tree (nested repeats, ramps, targets, cadence, text) with a stable key order (review #6) */
+  const stable = v => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']'
+    : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}'
+    : JSON.stringify(v === undefined ? null : v);
   function signature(ev) {
     const d = ev && ev.workout_doc;
-    const steps = d && Array.isArray(d.steps) ? JSON.stringify(d.steps.map(s => [s.duration, s.reps || 0, s.power || null, (s.steps || []).length])) : '';
+    const steps = d && Array.isArray(d.steps) ? stable(d.steps) : '';
     return [ev && ev.type, d ? d.duration : null, steps].join('|');
   }
   /* short stable code of the block, to show "changed since sent" */
   function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
-  return { START, END, buildBlock, stripBlock, hasBlock, withBlock, carbsToSend, signature, hash, safeLine };
+  return { START, END, buildBlock, stripBlock, hasBlock, markersOk, withBlock, carbsToSend, signature, hash, safeLine };
 });

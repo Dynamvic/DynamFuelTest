@@ -88,6 +88,19 @@
     });
   });
 
+  test('MATCH-04: the athlete picks a plan (case 06 stock) – the pack list follows that choice', async () => {
+    const W = req('workout.js'), E = req('engine.js'), M = req('match.js');
+    const c = (await load('tests/cases.json')).cases.find(x => x.id.startsWith('06'));
+    const rules = await load('data/rules.json'), L = await load('data/library.json');
+    const T = E.plan({ parsed: W.parse(await load(`tests/fixtures/${c.fixture}.json`)), ctx: c.ctx, profile: c.profile, rules });
+    ['drinkOnly', 'drinkAndFood', 'withoutDrink'].forEach(kind => {
+      const r = M.match({ targets: T, items: L.items, stock: c.stock, profile: c.profile, ctx: Object.assign({}, c.ctx, { planKind: kind }), rules });
+      const ch = r.alternatives.find(a => a.chosen); assert.equal(ch && ch.kind, kind, kind);
+      assert.equal(r.bottles.some(b => b.content === 'drink'), kind !== 'withoutDrink', `${kind}: drink bottles`);
+      assert.equal(r.solids.length > 0, kind !== 'drinkOnly', `${kind}: gels`);
+    });
+  });
+
   ['08', '09'].forEach(n => {
     test(`reference case ${n} – ${n === '08' ? '5 h endurance' : 'race 2 h 30'}: engine = coach (decided 24-11-2026)`, async () => {
       const W = req('workout.js'), E = req('engine.js'), M = req('match.js');

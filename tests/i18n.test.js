@@ -11,7 +11,7 @@
 
   test('i18n: every rule has an explanation in both languages, and its {fields} exist in rules.json', async () => {
     const I = req('i18n.js'), rules = (await load('data/rules.json')).rules;
-    const skip = ['MATCH-01', 'MATCH-02', 'MATCH-03', 'MATCH-04', 'MATCH-05'];   // matcher rules: explained with the pack list (Phase 3)
+    const skip = [];
     Object.keys(rules).filter(id => !skip.includes(id)).forEach(id => { assert.ok(I.nl['r_' + id], `NL r_${id}`); assert.ok(I.en['r_' + id], `EN r_${id}`); });
     Object.keys(I.nl).filter(k => k.startsWith('r_')).forEach(k => {
       const id = k.slice(2); assert.ok(rules[id], `${id} exists`);
@@ -21,6 +21,6 @@
 
   test('i18n: comma decimals in all texts (no "0.5"-style numbers)', async () => {
     const I = req('i18n.js');
-    ['nl', 'en'].forEach(l => Object.entries(I[l]).forEach(([k, s]) => { if (typeof s === 'string') assert.ok(!/\d\.\d/.test(s), `${l}.${k}: ${s}`); }));
+    ['nl', 'en'].forEach(l => Object.entries(I[l]).forEach(([k, s]) => { if (typeof s === 'string') assert.ok(!/\d\.\d/.test(s.replace(/CC BY 4\.0/g, '')), `${l}.${k}: ${s}`); /* "CC BY 4.0" is a licence name */ }));
   });
 })();

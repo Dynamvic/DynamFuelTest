@@ -1,0 +1,28 @@
+{
+    "icu_weight": 70.0,
+    "sportSettings":  [
+                          {
+                              "types":  [
+                                            "Ride",
+                                            "VirtualRide",
+                                            "MountainBikeRide",
+                                            "GravelRide",
+                                            "TrackRide",
+                                            "Cyclocross"
+                                        ],
+                              "ftp":  250,
+                              "indoor_ftp":  250,
+                              "power_zones":  [
+                                                  55,
+                                                  75,
+                                                  90,
+                                                  105,
+                                                  120,
+                                                  150,
+                                                  999
+                                              ],
+                              "sweet_spot_min":  84,
+                              "sweet_spot_max":  97
+                          }
+                      ]
+}

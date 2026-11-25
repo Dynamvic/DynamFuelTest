@@ -62,6 +62,21 @@
     assert.equal(c.fluid.mlph, 0, '1 h: 2 % of 70 kg = 1,4 l > 0,8 l sweat → nothing required');
   });
 
+  test('engine: a known sweat rate caps fluid also without body mass, and on a hot day (FLU-03, review #1)', async () => {
+    const t = await run('Duur_3u_2026-11-28', {}, { sweatRateLph: 0.4, massKg: null });
+    assert.equal(t.fluid.mlph, 400); assert.ok(t.fluid.hi <= 400); assert.ok(t.fluid.rules.includes('FLU-03'));
+    const h = await run('Duur_3u_2026-11-28', { tempC: 30 }, { sweatRateLph: 0.5, massKg: null });
+    assert.equal(h.fluid.mlph, 500, '750 ml/h hot-day value capped at the 0,5 l/h sweat rate');
+    assert.equal((await run('Duur_3u_2026-11-28', {}, { massKg: null })).fluid.mlph, 600, 'unknown sweat rate: unchanged');
+  });
+
+  test('engine: bedtime after midnight is the next day, so caffeine is not dropped (CAF-06, review #3)', async () => {
+    const t = await run('Duur_3u_2026-11-28', { goalTag: 'race', start: '09:00' }, { bedtime: '00:30' });
+    assert.equal(t.caffeine.doses.length, 2); assert.equal(t.caffeine.dropped.length, 0);
+    const late = await run('Duur_3u_2026-11-28', { goalTag: 'race', start: '17:00' }, { bedtime: '00:30' });
+    assert.deepEqual(late.caffeine.dropped.map(d => d.rule), ['CAF-02'], 'late dose 18:59 is after the 18:30 cut-off');
+  });
+
   test('engine: sodium = fluid × 460 mg/l, × 690 for salty sweat, sweat rate > 1,2 l/h or > 2 h (NA-01/02)', async () => {
     assert.equal((await run('Endurance_Shuttle_120m_2026-12-04')).sodium.mgph, 300, '0,6 × 460 = 276 → 300; exactly 2 h is not > 2 h');
     assert.equal((await run('Endurance_Shuttle_120m_2026-12-04', {}, { salty: 'yes' })).sodium.mgph, 400, '0,6 × 690 = 414 → 400');
@@ -91,7 +106,7 @@
   test('engine: caffeine doses 3 mg/kg at −60 min, 2 mg/kg at ⅔ of > 2,5 h, bedtime cut-off, always "to confirm"', async () => {
     const t = await run('Duur_3u_2026-11-28', { goalTag: 'race', start: '09:00' });
     assert.deepEqual(t.caffeine.doses.map(d => [d.atMin, d.mg, d.clock]), [[-60, 200, '08:00'], [119, 150, '10:59']]);
-    assert.equal(t.caffeine.status, 'open', 'EFSA limits not read yet');
+    assert.equal(t.caffeine.status, 'coach', 'EFSA limits read (CAF-05 confirmed); CAF-03/06 are coach rules');
     const late = await run('Duur_3u_2026-11-28', { goalTag: 'race', start: '15:30' }, { bedtime: '22:00' });
     assert.equal(late.caffeine.doses.length, 1); assert.equal(late.caffeine.dropped[0].rule, 'CAF-02');
   });

@@ -27,6 +27,12 @@
     assert.equal(r.fixed, 4 + 1 + 2, '4 profile values, the language, 2 rides');
   });
 
+  test('backup: stock records keep id, quantity, favourite and hidden; damaged ones are dropped', async () => {
+    const B = req('backup.js');
+    const r = B.check({ app: 'dynamfuel', schema: 1, settings: { lang: 'nl' }, profile: good(), items: [{ id: 'ndz-nrgy-gel-45', qty: 6, fav: true, hidden: false, extra: 1 }, { id: 'x y', qty: 1 }, { id: 'gel-a', qty: -2 }, { id: 'gel-b', qty: 2.5 }] }, 2026);
+    assert.deepEqual(r.data.items, [{ id: 'ndz-nrgy-gel-45', qty: 6, fav: true, hidden: false }]); assert.equal(r.fixed, 3);
+  });
+
   test('backup: other files, newer schemas and DynamCore back-ups are refused', async () => {
     const B = req('backup.js');
     assert.equal(B.check({ app: 'dynamcore', v: 2 }, 2026).why, 'format');

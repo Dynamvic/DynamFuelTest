@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.4.1';
+const APP_VERSION = '0.4.2';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -191,13 +191,29 @@ async function iwWrite(remove) {
   try {
     const ev = await icuFetch(`/events/${B.eventId}`), before = DFIcuWrite.signature(ev);
     const old = RIDES.get(id) || {}, lastCarbs = old.sent ? old.sent.carbs : null;
+    UI.iwOrig = null;
+    // review #8: markers that do not pair up (e.g. typed by the coach) → write nothing
+    if (!DFIcuWrite.markersOk(ev.description)) { UI.iwMsg = t('iw_markers'); UI.iwBad = true; UI.iwBusy = false; return rerender(); }
+    // review #5: "remove" without a DynamFuel block sends nothing, so the coach's text is never touched
+    if (remove && !DFIcuWrite.hasBlock(ev.description)) {
+      const rec = Object.assign({ id }, old); delete rec.sent; RIDES.set(id, rec); await DB.put('rides', rec);
+      UI.iwMsg = t('iw_nothing'); UI.iwBad = false; UI.iwBusy = false; return rerender();
+    }
     const body = { description: remove ? DFIcuWrite.stripBlock(ev.description) : DFIcuWrite.withBlock(ev.description, B.block) };
     if (!remove) { const cv = DFIcuWrite.carbsToSend(ev.carbs_per_hour, lastCarbs, B.carbs); if (cv !== undefined) body.carbs_per_hour = cv; }
     const after = await icuFetch(`/events/${B.eventId}`, { method: 'PUT', body: JSON.stringify(body) });
     if (DFIcuWrite.signature(after) !== before) {
-      const back = { description: ev.description || '' }; if (body.carbs_per_hour !== undefined && ev.carbs_per_hour != null) back.carbs_per_hour = ev.carbs_per_hour;
-      await icuFetch(`/events/${B.eventId}`, { method: 'PUT', body: JSON.stringify(back) }).catch(() => { });
-      UI.iwMsg = t('iw_restored'); UI.iwBad = true;
+      // review #7: put back the old description and the old carbs_per_hour (null when it was empty), then check again
+      const back = { description: ev.description || '' };
+      if (body.carbs_per_hour !== undefined) back.carbs_per_hour = ev.carbs_per_hour != null ? ev.carbs_per_hour : null;
+      let ok = false;
+      try {
+        await icuFetch(`/events/${B.eventId}`, { method: 'PUT', body: JSON.stringify(back) });
+        ok = DFIcuWrite.signature(await icuFetch(`/events/${B.eventId}`)) === before;
+      } catch (e) { ok = false; }
+      if (ok) UI.iwMsg = t('iw_restored');
+      else { UI.iwMsg = t('iw_restore_fail'); UI.iwOrig = ev.description || ''; }
+      UI.iwBad = true;
     } else {
       const rec = Object.assign({ id }, old);
       if (remove) delete rec.sent; else rec.sent = { hash: B.hash, at: new Date().toISOString(), carbs: body.carbs_per_hour !== undefined ? body.carbs_per_hour : lastCarbs };
@@ -416,7 +432,7 @@ function vRide(id) {
       <p class="small">${sent ? (sent.hash === hsh ? t('iw_sent', { d: F.date(sent.at.slice(0, 10)), t: sent.at.slice(11, 16) }) : t('iw_changed')) : t('iw_not_sent')}</p>
       <details class="inl small"><summary>${t('iw_preview')}</summary><pre class="small" style="white-space:pre-wrap">${esc(block)}</pre></details>
       <div class="row"><button class="btn primary" data-act="iwsend"${UI.iwBusy ? ' disabled' : ''}>${t('iw_send')}</button>${sent ? `<button class="btn" data-act="iwremove"${UI.iwBusy ? ' disabled' : ''}>${t('iw_remove')}</button>` : ''}</div>
-      <p class="msg${UI.iwBad ? ' bad' : ''}" role="status">${esc(UI.iwMsg || '')}</p></section>`;
+      <p class="msg${UI.iwBad ? ' bad' : ''}" role="status">${esc(UI.iwMsg || '')}</p>${UI.iwMsg && UI.iwOrig != null ? `<p class="small" style="white-space:pre-wrap;user-select:text">${esc(UI.iwOrig)}</p>` : ''}</section>`;
   }
 
   /* why */
@@ -701,6 +717,7 @@ function packCard(M, T, ctx, C, needRefill) {
     if (g.what === 'sodium' && hasStock) warn.push(t('gap_na', { mg: g.shortMg }));
     if (g.what === 'fluid') warn.push(t('gap_fluid', { ml: g.shortMl }));
   });
+  M.notes.filter(n => n.key === 'sodium_high').forEach(n => warn.push(t('na_high', { mg: n.p.mgph, hi: n.p.hi, H })));
   if (warn.length) h += `<ul class="plain small warnlist">${warn.map(x => `<li>${x}</li>`).join('')}</ul>`;
   const shop = (M.shopping || []).filter(s => s.for !== 'cho' || hasStock);
   if (shop.length) h += `<details class="inl"><summary>${t('shop')}</summary><ul class="plain small">${shop.map(s => s.items.map(i => `<li>${esc(itemName(i.id))}${i.n ? ` (${i.n}×)` : ''}</li>`).join('')).join('')}</ul></details>`;
@@ -768,7 +785,7 @@ function route() {
 }
 function rerender() { const y = scrollY; route(); scrollTo(0, y); }
 document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'cond') UI.condOpen = ev.target.open; }, true);
-addEventListener('hashchange', () => { UI.iwMsg = ''; UI.iwBad = false; UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (!/^#own/.test(location.hash)) { UI.own = null; UI.ownErr = ''; UI.offMsg = ''; } if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
+addEventListener('hashchange', () => { UI.iwMsg = ''; UI.iwBad = false; UI.iwOrig = null; UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (!/^#own/.test(location.hash)) { UI.own = null; UI.ownErr = ''; UI.offMsg = ''; } if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
 
 /* ---------- sheet, toast, update banner ---------- */
 function sheet(html) {
