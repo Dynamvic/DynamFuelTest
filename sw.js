@@ -4,7 +4,7 @@
    this site's old DynamFuel caches are deleted – never DynamCore's, never the other DynamFuel site's.
    An old DynamCore (before dynamcore-v17) may delete this cache once: the page then asks this worker to re-cache (message
    'recache'), and every successful network answer is cached again anyway. */
-const VERSION = 'v17';
+const VERSION = 'v18';
 const SITE = (new URL(self.registration.scope).pathname.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'root').toLowerCase();
 const PREFIX = `dynamfuel-${SITE}-`;
 const CACHE = PREFIX + VERSION;
