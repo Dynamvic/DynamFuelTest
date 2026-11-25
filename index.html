@@ -196,5 +196,17 @@ nav.tabs a[aria-current]{color:var(--accent)}
 <script src="key.js"></script>
 <script src="access.js"></script>
 <script src="app.js"></script>
+<script>
+/* safety net: if the app has not drawn anything after 6 s (e.g. a file missing or replaced by mistake), show a message
+   instead of an empty screen. It does not depend on any other DynamFuel file. */
+function dfStartCheck() {
+  var v = document.getElementById('view');
+  if (!v || v.innerHTML.replace(/\s/g, '')) return;
+  v.innerHTML = '<div class="card"><h2>DynamFuel</h2><p>DynamFuel kon niet starten. Wacht een paar minuten en laad opnieuw. Blijft dit zo, verwittig je coach.</p>'
+    + '<p class="small muted">DynamFuel could not start. Wait a few minutes and reload. If it stays like this, tell your coach.</p>'
+    + '<button class="btn primary big wide" type="button" onclick="location.reload()">Opnieuw laden / Reload</button></div>';
+}
+setTimeout(dfStartCheck, 6000);
+</script>
 </body>
 </html>
