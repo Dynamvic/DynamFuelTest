@@ -87,6 +87,11 @@
       if (!(r.sent && typeof r.sent.hash === 'string' && typeof r.sent.at === 'string' && (r.sent.carbs == null || Number.isInteger(r.sent.carbs)))) return null;
       o.sent = { hash: r.sent.hash, at: r.sent.at, carbs: r.sent.carbs ?? null };
     }
+    if (r.used != null) {   // UX #19: what was taken off the stock for this ride (to undo it, and to keep this ride's plan)
+      const u = r.used, okItem = x => x && typeof x.id === 'string' && Number.isInteger(x.from) && Number.isInteger(x.to) && x.from >= x.to && x.to >= 0;
+      if (!(u && typeof u.at === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(u.at) && Array.isArray(u.items) && u.items.length <= 50 && u.items.every(okItem))) return null;
+      o.used = { at: u.at, items: u.items.map(x => ({ id: x.id, from: x.from, to: x.to })) };
+    }
     if (r.planKind != null) { if (!['drinkOnly', 'drinkAndFood', 'withoutDrink'].includes(r.planKind)) return null; o.planKind = r.planKind; }
     if (r.id.startsWith('man-')) {
       if (!isIso(r.date) || !numIn(r.durationS, 600, 12 * 3600) || typeof (r.name ?? '') !== 'string') return null;

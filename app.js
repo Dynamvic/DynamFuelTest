@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.5.0';
+const APP_VERSION = '0.6.0';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -280,21 +280,37 @@ function vRides() {
   // UX #18: no stock yet → say what to do next (the pack list needs it)
   if (!stockList().length) html += `<section class="card notice"><h3>${t('rides_stock_t')}</h3><p class="small">${t('rides_stock_l')}</p><div class="row"><a class="btn primary" href="#stock">${t('rides_stock_btn')}</a></div></section>`;
   let day = '';
-  list.forEach(r => {
+  list.forEach((r, ix) => {
     if (r.date !== day) { day = r.date; html += `<div class="dayh">${esc(dayLabel(r.date))}</div>`; }
+    const next = ix === 0;   // UX #16: the first ride is the next one
     const C = RIDES.get(r.id) || {}, io = C.indoor != null ? C.indoor : r.indoor;
     // UX #9: the same start time the ride screen uses (own, planned, usual); open questions in plain words
     const start = C.start || r.time || SET.usualStart || null, nq = (start ? 0 : 1) + (io == null && r.type !== 'VirtualRide' ? 1 : 0);
-    html += `<a class="ride" href="#ride/${encodeURIComponent(r.id)}"><b>${esc(r.name || t('g_endurance'))}</b>
+    // UX #16: the answer on the list – only when no question is open (no guessing); the same plan the ride screen shows
+    let ans = '';
+    if (!nq) { try { const PL = ridePlan(r, true); if (!PL.err) ans = rideLine(PL); } catch (e) { ans = ''; } }
+    html += `<a class="ride${next ? ' next' : ''}" href="#ride/${encodeURIComponent(r.id)}">${next ? `<span class="eyebrow">${t('ride_next_t')}</span>` : ''}<b>${esc(r.name || t('g_endurance'))}</b>
       <span class="meta">${start ? `<span class="tabular">${esc(start)}</span>` : ''}<span class="tabular">${r.durationS ? F.dur(r.durationS) : ''}</span>
       ${io === true ? `<span>${t('indoor')}</span>` : io === false ? `<span>${t('outdoor')}</span>` : ''}${nq ? `<span class="warnc-t">${nq === 1 ? t('ride_q_1') : t('ride_q_n', { n: nq })}</span>` : ''}
-      ${r.goalTag ? `<span class="pill acc">${esc(r.goalTag)}</span>` : ''}${r.source === 'man' ? `<span class="pill coach">${t('by_hand')}</span>` : !r.structured ? `<span class="pill coach">${t('no_steps')}</span>` : ''}</span></a>`;
+      ${r.goalTag ? `<span class="pill acc">${esc(r.goalTag)}</span>` : ''}${r.source === 'man' ? `<span class="pill coach">${t('by_hand')}</span>` : !r.structured ? `<span class="pill coach">${t('no_steps')}</span>` : ''}</span>
+      ${ans ? `<span class="ans tabular">${ans}</span>` : ''}</a>`;
   });
   if (skipped) html += `<p class="small muted">${skipped === 1 ? t('rides_skipped_1') : t('rides_skipped', { n: skipped })}</p>`;
   html += `<a class="btn wide" href="#add">${IC.plus}${t('rides_add')}</a>`;
   return html;
 }
 
+/* one line for the Rides list: targets per hour + how many things and bottles to take (from the same pack list) */
+function rideLine(PL) {
+  const { T, M, withStock } = PL, H = lang() === 'en' ? '/h' : '/u';
+  const parts = [`${T.cho.gph} g${H}`, `${T.fluid.mlph} ml${H}`];
+  if (withStock) {
+    const n = M.pack.filter(p => !p.bottle && !p.refill).reduce((a, p) => a + p.n, 0), b = M.pack.filter(p => p.bottle).reduce((a, p) => a + p.bottles, 0);
+    if (n) parts.push(t('ls_items', { n }));
+    if (b) parts.push(b === 1 ? t('ls_bottle') : t('ls_bottles', { n: b }));
+  }
+  return esc(parts.join(' · '));
+}
 /* add a ride by hand (no Intervals.icu, or a ride without blocks) */
 function vAdd() {
   const A = UI.add || (UI.add = { name: '', date: todayIso(), h: '', m: '', goal: 'endurance', start: SET.usualStart || '' });
@@ -326,57 +342,50 @@ function rideContext(r) {
   return { C, indoor, start, found: C.next8h == null && !!found,
     ctx: { goalTag: goalTag || (r.goalTag === 'trainlow' ? 'trainlow' : null), goalChoice, indoor: indoor === true, tempC: C.tempC ?? null, start, rideYear: +r.date.slice(0, 4), next8h, refillMin: 0 } };
 }
-function vRide(id) {
-  const r = id && findRide(id);
-  if (!r) return `${topbar(t('rides_t'), '#rides')}<p class="muted">${t('rides_none')}</p>`;
-  const X = rideContext(r), ctx = X.ctx, R = DATA.rules;
-  const fc = forecastFor(r, X);                                           // P3-4: own value wins, else the forecast
+/* the plan for one ride (engine + matcher), shared by the ride screen and the Rides list (UX #16). quiet = no forecast fetch.
+   UX #19: when this ride's pack list was taken off the stock, those items are counted back in for THIS ride, so its plan stays. */
+function ridePlan(r, quiet) {
+  const X = rideContext(r), ctx = X.ctx, R = DATA.rules, C = X.C;
+  const fc = forecastFor(r, X, quiet);                                    // P3-4: own value wins, else the forecast
   if (ctx.tempC == null && fc && fc.temp != null) ctx.tempC = fc.temp;
   const prof = Object.assign({}, P, { ftpW: P.ftpW || (ATH && ATH.ftp) || null });
   const doc = RD.workoutDoc(r, ATH, prof, ctx.goalTag && ctx.goalTag !== 'trainlow' ? ctx.goalTag : ctx.goalChoice || 'endurance', R.rules);
   const manSt = doc.manualRule && R.rules[doc.manualRule] ? R.rules[doc.manualRule].status : null;   // MAN-03 (key/race) is OPEN
   const parsed = W.parse(doc);
-  if (!parsed.ok) return `${topbar(r.name, '#rides')}<div class="card badc"><p>${t('w_parse')}</p></div>`;
+  if (!parsed.ok) return { X, ctx, fc, err: 'parse' };
   const T = E.plan({ parsed, ctx, profile: prof, rules: R });
+  const fl = T.fluid, bottleMl = P.bottleMl;
+  const nBottles = bottleMl && fl.totalMl ? Math.ceil(fl.totalMl / bottleMl - 1e-9) : 0;
+  const needRefill = !ctx.indoor && P.cages != null && nBottles > P.cages;
+  const known = new Set(libItems().map(x => x.id)), stock = DFUi.stockForRide([...STOCK.values()], C.used, id => known.has(id));
+  const M = DFMatch.match({ targets: T, items: libItems(), stock, profile: P, rules: R,
+    ctx: Object.assign({}, ctx, { refillMin: needRefill ? (C.refillMin || 0) : 0, planKind: C.planKind }) });
+  return { X, ctx, C, fc, prof, doc, manSt, parsed, T, M, needRefill, withStock: stock.length > 0 };
+}
+function vRide(id) {
+  const r = id && findRide(id);
+  if (!r) return `${topbar(t('rides_t'), '#rides')}<p class="muted">${t('rides_none')}</p>`;
+  const PL = ridePlan(r);
+  if (PL.err) return `${topbar(r.name, '#rides')}<div class="card badc"><p>${t('w_parse')}</p></div>`;
+  const { X, ctx, C, fc, doc, manSt, parsed, T, M, needRefill, withStock } = PL, R = DATA.rules;
   const goal = T.goal.value, hpart = lang() === 'en' ? '/h' : '/u';
   let h = topbar(r.name || t('g_' + goal), '#rides');
-  h += `<p class="meta"><span>${esc(dayLabel(r.date))}</span><span class="tabular">${esc(X.start || t('no_time'))}</span><span class="tabular">${F.dur(parsed.durationS)}</span>
-    ${T.intensity.ifactor != null ? `<span>${t('ride_if', { v: F.num(T.intensity.ifactor, 2) })}</span>` : ''}${r.tags.map(g => `<span class="pill acc">${esc(g)}</span>`).join('')}</p>`;
-  const shareRow = `<div class="row noprint"><button class="btn primary" data-act="card">${t('card_share')}</button><button class="btn" data-act="sticker">${t('card_sticker')}</button></div>`;
-  h += shareRow;   // UX #4: share at the top too (UI.fuel is built further down, before any tap can happen)
+  h += `<p class="meta"><span>${esc(dayLabel(r.date))}</span>${X.start ? `<span class="tabular">${esc(X.start)}</span>` : ''}<span class="tabular">${F.dur(parsed.durationS)}</span>
+    <span>${t('g_' + goal)}</span>${T.intensity.ifactor != null ? `<span>${t('ride_if', { v: F.num(T.intensity.ifactor, 2) })}</span>` : ''}${r.tags.map(g => `<span class="pill acc">${esc(g)}</span>`).join('')}</p>`;
 
-  /* warnings */
+  h += `<div class="row noprint"><button class="btn primary" data-act="card">${t('card_share')}</button><button class="btn" data-act="sticker">${t('card_sticker')}</button></div>`;   // UX #4
+  /* UX #15: open questions in one card, answered right here (they disappear once set) */
+  const askIo = X.indoor == null && r.type !== 'VirtualRide', askStart = !X.start;
+  if (askIo || askStart) h += `<section class="card warnc" aria-labelledby="qhead"><h2 id="qhead">${askIo && askStart ? t('ride_q_n', { n: 2 }) : t('ride_q_1')}</h2>
+    ${askIo ? `<div class="fld"><span class="lbl">${t('ride_io')}</span><small class="muted">${t('ride_io_ask')}</small>${chips('indoor', [[true, t('indoor')], [false, t('outdoor')]], X.indoor, 'b', 'rset', t('ride_io'))}</div>` : ''}
+    ${askStart ? `<div class="fld"><label class="lbl" for="q-start">${t('ride_start')}</label><small class="muted">${t('ride_start_ask')}</small><span class="tin time"><input id="q-start" type="time" data-rf="start" value=""></span></div>` : ''}</section>`;
   const warn = [];
   if (T.warnings.includes('trainlow_unsupported')) warn.push(t('trainlow_warn'));
   if (T.warnings.includes('nomass')) warn.push(`${t('w_nomass')} <a href="#profile">${t('tab_profile')}</a>`);
-  if (X.indoor == null) warn.push(t('ride_io_ask'));
-  if (!X.start) warn.push(t('ride_start_ask'));
   warn.forEach(w => { h += `<div class="card warnc"><p>${w}</p></div>`; });
-  if (T.warnings.includes('ask_sweat_test_once')) h += `<div class="card notice"><p>${t('w_sweat_once')}</p><details class="inl"><summary>${t('sweat_test_t')}</summary><p class="small">${t('sweat_test')}</p></details>
-    <div class="row"><button class="btn" data-act="sweatok">${t('w_sweat_ok')}</button></div></div>`;
 
-  /* conditions */
-  const C = X.C, tagged = ctx.goalTag && ctx.goalTag !== 'trainlow';
-  h += `<details class="card" id="cond"${X.indoor == null || !X.start || UI.condOpen ? ' open' : ''}><summary>${t('ride_cond')}</summary>
-    <div class="fld"><span class="lbl">${t('ride_goal')}</span>${tagged ? `<p>${t('g_' + goal)} <span class="small muted">· ${t('goal_tag', { g: esc(ctx.goalTag) })}</span></p>`
-      : chips('goal', E.GOALS.map(g => [g, t('g_' + g)]), goal, 's', 'rset') + (T.goal.source === 'suggested' ? `<small class="muted">${t('goal_sug')}</small>` : '')}</div>
-    ${r.type === 'VirtualRide' ? '' : `<div class="fld"><span class="lbl">${t('ride_io')}</span>${chips('indoor', [[true, t('indoor')], [false, t('outdoor')]], X.indoor, 'b', 'rset')}</div>`}
-    <div class="fld"><label class="lbl" for="r-start">${t('ride_start')}</label><span class="tin time"><input id="r-start" type="time" data-rf="start" value="${esc(X.start || '')}"></span></div>
-    <div class="fld"><label class="lbl" for="r-temp">${t('ride_temp')} (${t('optional')})</label><span class="tin"><input id="r-temp" type="text" inputmode="decimal" data-rf="tempC" value="${esc(ns(C.tempC))}" placeholder="${fc && fc.temp != null ? esc(ns(fc.temp)) : ''}"><span>°C</span></span>
-      ${fc ? `<small class="muted">${fc.pending ? t('wx_loading') : fc.temp != null ? t('wx_fc', { t: ns(fc.temp), place: esc(fc.place) }) + (C.tempC != null ? ' ' + t('wx_own') : '') : t('wx_none')}</small>`
-        : !SET.location && X.indoor === false ? `<small class="muted"><a href="#settings">${t('wx_set')}</a></small>` : ''}
-      <span class="err" role="alert">${UI.err.tempC || ''}</span></div>
-    <div class="fld"><span class="lbl">${t('ride_next')}</span>${chips('next8h', [[true, t('yes')], [false, t('no')]], ctx.next8h, 'b', 'rset')}${X.found ? `<small class="muted">${t('ride_next_found')}</small>` : ''}</div>
-    ${!r.structured ? `<p class="small muted">${t('ride_manual_int', { z: doc.manualZone })} ${statusPill(manSt)}</p>` : ''}
-    ${r.source === 'man' ? `<button class="btn danger" data-act="rdel">${t('ride_delete')}</button>` : ''}
-    ${r.description ? `<details class="inl"><summary>${t('ride_desc')}</summary><p class="small" style="white-space:pre-wrap">${esc(DFIcuWrite.stripBlock(r.description))}</p></details>` : ''}</details>`;
-
-  /* during */
-  const c = T.cho, fl = T.fluid, na = T.sodium, bottleMl = P.bottleMl;
-  const nBottles = bottleMl && fl.totalMl ? Math.ceil(fl.totalMl / bottleMl - 1e-9) : 0;
-  const needRefill = !ctx.indoor && P.cages != null && nBottles > P.cages;
-  const M = DFMatch.match({ targets: T, items: libItems(), stock: stockList(), profile: P, rules: R,
-    ctx: Object.assign({}, ctx, { refillMin: needRefill ? (C.refillMin || 0) : 0, planKind: C.planKind }) });
+  /* summary: targets + what to take + share (UX #15, coach Q7) */
+  const c = T.cho, fl = T.fluid, na = T.sodium;
   const notes = [];
   if (c.gph === 0 && !c.optional) notes.push(t('cho_zero'));
   if (c.optional) notes.push(t('cho_opt', { lo: c.lo, hi: c.hi }));
@@ -386,17 +395,21 @@ function vRide(id) {
   // HEAT-01 tip only on a hot day (HEAT-02 hotC, the coach's threshold) – with the forecast every outdoor ride has a temperature (todo T7)
   if (T.warnings.includes('heat_cool_drinks') && ctx.tempC != null && ctx.tempC >= R.rules['HEAT-02'].hotC) notes.push(t('w_heat', { c: R.rules['HEAT-01'].coolC }));
   if (r.carbsPerHour) notes.push(t('ride_carbs_icu', { g: ns(r.carbsPerHour) }));
+  const cafShown = T.caffeine.on || T.caffeine.optional;
   h += `<section class="card"><h2>${t('sec_during')}</h2><div class="big3">
     <div class="tile"><span class="k">${t('cho')}</span><span class="v">${c.gph}<small> g${hpart}</small></span><span class="s">${(c.gph || c.optional) && DFUi.isRange(c.lo, c.hi) ? t('range', { lo: c.lo, hi: c.hi }) : ''}</span>${statusPill(c.status)}</div>
     <div class="tile"><span class="k">${t('fluid')}</span><span class="v">${fl.mlph}<small> ml${hpart}</small></span><span class="s">${t('total_ml', { ml: fl.totalMl })}</span>${statusPill(fl.status)}</div>
     <div class="tile"><span class="k">${t('sodium')}</span><span class="v">${na.none ? '–' : na.mgph}<small>${na.none ? '' : ' mg' + hpart}</small></span><span class="s">${na.none ? t('na_none') : t('na_perl', { mg: na.mgPerL })}</span>${statusPill(na.status)}</div></div>
     ${c.gph ? `<p class="small muted">${t('total_g', { g: c.totalG })}</p>` : ''}
     ${notes.length ? `<ul class="plain small">${notes.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-    <div class="fld"><span class="lbl">${t('caffeine_t')} ${T.caffeine.on || T.caffeine.optional ? statusPill(T.caffeine.status) : ''}</span>${cafText(T.caffeine)}${cafMatchText(M)}</div></section>`;
-  h += packCard(M, T, ctx, C, needRefill);
+    ${cafShown ? `<div class="fld"><span class="lbl">${t('caffeine_t')} ${statusPill(T.caffeine.status)}</span>${cafText(T.caffeine)}${cafMatchText(M)}</div>` : ''}
+    ${packPart(M, T, C, needRefill, withStock)}${usedPart(M, C, withStock)}</section>`;
+  if (T.warnings.includes('ask_sweat_test_once')) h += `<div class="card notice"><p>${t('w_sweat_once')}</p><details class="inl"><summary>${t('sweat_test_t')}</summary><p class="small">${t('sweat_test')}</p></details>
+    <div class="row"><button class="btn" data-act="sweatok">${t('w_sweat_ok')}</button></div></div>`;
 
-  /* timing: with stock, the products per moment (matcher schedule); without, what kind of intake fits */
-  const every = R.rules['TIME-02'].everyMin, drinkMl = F.roundTo(fl.mlph * every / 60, R.rules['RND-01'].fluidMl), withStock = stockList().length > 0;
+  /* before, timing, after – in the order of the day */
+  h += `<section class="card"><h2>${t('sec_before')}</h2>${preText(T.pre)}</section>`;
+  const every = R.rules['TIME-02'].everyMin, drinkMl = F.roundTo(fl.mlph * every / 60, R.rules['RND-01'].fluidMl);
   /* UX #3: the usual drink amount once, then only the moments with something to eat (or another drink amount), like the fuel card */
   const useStock = withStock && T.cho.gph > 0;
   const tRows = DFUi.timingRows(T.slots, M.schedule, drinkMl, (s, sc) => useStock ? sc.eat.length > 0 : T.cho.gph > 0);
@@ -409,21 +422,17 @@ function vRide(id) {
   h += `<section class="card"><h2>${t('sec_timing')} ${statusPill(manSt)}</h2>${T.slots.length && (drinkMl || tRows.length)
     ? `${drinkMl && T.slots.length ? `<p><b>${t('iw_drink', { ml: drinkMl, every })}</b></p>` : ''}${tRows.length ? `<div class="slots">${tRows.map(tRow).join('')}</div>` : ''}`
     : `<p class="muted">${t('slot_none')}</p>`}</section>`;
-
-  /* before / after / energy */
-  h += `<section class="card"><h2>${t('sec_before')}</h2>${preText(T.pre)}</section>`;
   h += `<section class="card"><h2>${t('sec_after')}</h2>${postText(T.post)}</section>`;
-  if (T.energy.kJ) h += `<section class="card"><h2>${t('sec_energy')}</h2><p class="small">${t('energy', { kj: T.energy.kJ, k1: T.energy.kcal[0], k2: T.energy.kcal[1] })}</p></section>`;
 
   /* fuel card (image) + top-tube sticker (P3-3): plain-text model of what this screen shows */
   const slotsPlain = T.slots.map((s, i) => {
-    const sc = M.schedule[i] || { eat: [], drinkMl }, useStock = withStock && T.cho.gph > 0;
+    const sc = M.schedule[i] || { eat: [], drinkMl };
     const kind = s.sustained ? t('slot_sustained') : s.easy ? t('slot_food') : t('slot_gel');
     const shortEat = sc.eat.map(e => (itemById(e.id) || {}).name || e.id).join(' + ');
     return { time: X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min }), what: useStock ? sc.eat.map(e => itemName(e.id)).join(' + ') : kind,
       short: useStock ? shortEat : (T.cho.gph > 0 ? t('stk_eat') : ''), drink: sc.drinkMl ? t('slot_drink', { ml: sc.drinkMl }) : '' };
   });
-  const cafOpen = (T.caffeine.on || T.caffeine.optional) && T.caffeine.status === 'open';
+  const cafOpen = cafShown && T.caffeine.status === 'open';
   UI.fuel = { title: r.name || t('g_' + goal), meta: [dayLabel(r.date), X.start || '', F.dur(parsed.durationS), t('g_' + goal)].filter(Boolean).join(' · '),
     drink: drinkMl ? t('iw_drink', { ml: drinkMl, every }) : '', drinkShort: drinkMl ? t('stk_drink', { ml: drinkMl, every }) : '',
     metaShort: `${F.date(r.date)} ${X.start || ''}`.trim(), target: `${c.gph} g${hpart} · ${fl.mlph} ml${hpart}`,
@@ -434,7 +443,6 @@ function vRide(id) {
     pack: withStock || T.cho.gph === 0 ? packLines(M) : [], slots: slotsPlain, pre: preLines(T.pre), post: postLines(T.post),
     hPack: t('sec_pack'), hTiming: t('sec_timing'), hBefore: t('sec_before'), hAfter: t('sec_after'), sub: t('app_sub'), foot: t('card_foot'),
     fileName: `dynamfuel-${r.date}-${String(r.name || goal).replace(/[^A-Za-z0-9]+/g, '-').slice(0, 30)}.png` };
-  h += shareRow;
 
   /* Phase 4 A: write the plan into the planned workout in Intervals.icu (switch in Settings, per ride, never automatic) */
   if (SET.icuWrite && r.source === 'icu' && ICU.key) {
@@ -453,13 +461,38 @@ function vRide(id) {
       <p class="msg${UI.iwBad ? ' bad' : ''}" role="status">${esc(UI.iwMsg || '')}</p>${UI.iwMsg && UI.iwOrig != null ? `<p class="small" style="white-space:pre-wrap;user-select:text">${esc(UI.iwOrig)}</p>` : ''}</section>`;
   }
 
+  /* folded: the ride's settings, more info, why */
+  const tagged = ctx.goalTag && ctx.goalTag !== 'trainlow';
+  h += `<details class="card" id="cond"${UI.condOpen ? ' open' : ''}><summary>${t('ride_cond')}</summary>
+    <div class="fld"><span class="lbl">${t('ride_goal')}</span>${tagged ? `<p>${t('g_' + goal)} <span class="small muted">· ${t('goal_tag', { g: esc(ctx.goalTag) })}</span></p>`
+      : chips('goal', E.GOALS.map(g => [g, t('g_' + g)]), goal, 's', 'rset') + (T.goal.source === 'suggested' ? `<small class="muted">${t('goal_sug')}</small>` : '')}</div>
+    ${r.type === 'VirtualRide' ? '' : `<div class="fld"><span class="lbl">${t('ride_io')}</span>${chips('indoor', [[true, t('indoor')], [false, t('outdoor')]], X.indoor, 'b', 'rset')}</div>`}
+    <div class="fld"><label class="lbl" for="r-start">${t('ride_start')}</label><span class="tin time"><input id="r-start" type="time" data-rf="start" value="${esc(X.start || '')}"></span></div>
+    <div class="fld"><label class="lbl" for="r-temp">${t('ride_temp')} (${t('optional')})</label><span class="tin"><input id="r-temp" type="text" inputmode="decimal" data-rf="tempC" value="${esc(ns(C.tempC))}" placeholder="${fc && fc.temp != null ? esc(ns(fc.temp)) : ''}"><span>°C</span></span>
+      ${fc ? `<small class="muted">${fc.pending ? t('wx_loading') : fc.temp != null ? t('wx_fc', { t: ns(fc.temp), place: esc(fc.place) }) + (C.tempC != null ? ' ' + t('wx_own') : '') : t('wx_none')}</small>`
+        : !SET.location && X.indoor === false ? `<small class="muted"><a href="#settings">${t('wx_set')}</a></small>` : ''}
+      <span class="err" role="alert">${UI.err.tempC || ''}</span></div>
+    <div class="fld"><span class="lbl">${t('ride_next')}</span>${chips('next8h', [[true, t('yes')], [false, t('no')]], ctx.next8h, 'b', 'rset')}${X.found ? `<small class="muted">${t('ride_next_found')}</small>` : ''}</div>
+    ${!r.structured ? `<p class="small muted">${t('ride_manual_int', { z: doc.manualZone })} ${statusPill(manSt)}</p>` : ''}
+    ${r.source === 'man' ? `<button class="btn danger" data-act="rdel">${t('ride_delete')}</button>` : ''}
+    ${r.description ? `<details class="inl"><summary>${t('ride_desc')}</summary><p class="small" style="white-space:pre-wrap">${esc(DFIcuWrite.stripBlock(r.description))}</p></details>` : ''}</details>`;
+  if (!cafShown || T.energy.kJ) h += `<details class="card"><summary>${t('sec_more')}</summary>
+    ${!cafShown ? `<div class="fld"><span class="lbl">${t('caffeine_t')}</span>${cafText(T.caffeine)}</div>` : ''}
+    ${T.energy.kJ ? `<div class="fld"><span class="lbl">${t('sec_energy')}</span><p class="small">${t('energy', { kj: T.energy.kJ, k1: T.energy.kcal[0], k2: T.energy.kcal[1] })}</p></div>` : ''}</details>`;
+
   /* why */
   const ids = [];
-  [c.rules, fl.rules, na.rules, T.caffeine.rules, T.pre.rules, T.post.rules, ...T.slots.map(s => s.rules), T.energy.rules, T.intensity.rules, doc.manualRule ? [doc.manualRule] : [], stockList().length ? ['MATCH-01', 'MATCH-02', 'MATCH-03', 'MATCH-04', 'MATCH-05'] : []].forEach(l => (l || []).forEach(x => { if (!ids.includes(x)) ids.push(x); }));
+  [c.rules, fl.rules, na.rules, T.caffeine.rules, T.pre.rules, T.post.rules, ...T.slots.map(s => s.rules), T.energy.rules, T.intensity.rules, doc.manualRule ? [doc.manualRule] : [], withStock ? ['MATCH-01', 'MATCH-02', 'MATCH-03', 'MATCH-04', 'MATCH-05'] : []].forEach(l => (l || []).forEach(x => { if (!ids.includes(x)) ids.push(x); }));
   h += `<details class="card"><summary>${t('sec_why')}</summary><p class="small muted">${t('why_rules')}</p><div class="why">${ids.map(id => {
     const ru = R.rules[id] || {}; return `<div class="r${ru.status === 'open' ? ' open' : ''}"><span>${esc(ruleText(id))}</span><span><code>${id}</code> ${ru.status === 'open' ? `<span class="pill open">${t('open_badge')}</span>` : ru.status === 'coach' ? `<span class="pill coach">${t('coach_badge')}</span>` : ''}</span></div>`; }).join('')}</div>
     <p class="small"><a href="#about">${t('ref_t')}</a></p></details>`;
   return h;
+}
+/* UX #19 (coach Q5: the whole pack list, with undo): take this ride's pack list off the stock, or put it back */
+function usedPart(M, C, withStock) {
+  if (!withStock) return '';
+  if (C.used) return `<div class="card notice"><p class="small">${t('used_done', { d: F.date(C.used.at) })}</p><div class="row"><button class="btn" data-act="unuse">${t('used_undo')}</button></div></div>`;
+  return DFUi.usePack(M.pack, stockQty()).length ? `<button class="btn wide" data-act="use">${t('used_btn')}</button>` : '';
 }
 function cafText(cf) {
   if (cf.optional) return `<p>${t('caf_opt')}</p>`;
@@ -489,12 +522,12 @@ function cafLines(cf) {
 const WX = store.get('wx', {}) || {};
 const saveWx = () => { const keep = Object.entries(WX).sort((a, b) => b[1].at - a[1].at).slice(0, 20); Object.keys(WX).forEach(k => { if (!keep.some(e => e[0] === k)) delete WX[k]; }); store.set('wx', WX); };
 UI.wxBusy = {};
-function forecastFor(r, X) {
+function forecastFor(r, X, quiet) {
   const L = SET.location; if (!L || X.indoor !== false || !X.start || !r.date) return null;
   const diff = Math.round((Date.parse(r.date + 'T00:00:00Z') - Date.parse(todayIso() + 'T00:00:00Z')) / 86400000);
   if (!DFWeather.inRange(diff)) return null;
   const key = `${L.lat},${L.lon},${r.date}`, c = WX[key];
-  if (!c || Date.now() - c.at > 3 * 3600e3) setTimeout(() => fetchWx(key, L, r.date, diff), 0);
+  if (!quiet && (!c || Date.now() - c.at > 3 * 3600e3)) setTimeout(() => fetchWx(key, L, r.date, diff), 0);   // the Rides list only reads what is cached
   if (!c) return UI.wxBusy[key] === 'fail' ? { temp: null, place: L.name } : { pending: true, place: L.name };
   return { temp: DFWeather.maxDuring(c.hourly, r.date, X.start, r.durationS), place: L.name };
 }
@@ -555,17 +588,30 @@ function servingText(it) {
   if (it.category === 'electrolyte' && it.waterMl) return t('serv_tab', { ml: it.waterMl });
   const s = it.serving || {}; return [s.amount != null ? `${ns(s.amount)} ${s.unit || ''}`.trim() : '', s.format || ''].filter(Boolean).join(' · ');
 }
+/* UX #17: a compact row – name, ⋯ (details sheet) and ★ on top; key facts and the − qty + stepper below */
 function itemRow(it) {
   const s = STOCK.get(it.id) || { qty: 0 }, a = DFMatch.allowed(it, P), nm = esc(`${it.brand} ${it.name}`.trim());   // UX #14: labels name the product
   const facts = [it.choG != null ? `${ns(it.choG)} g ${t('cho').toLowerCase()}` : null, it.sodiumMg != null ? `${ns(it.sodiumMg)} mg ${t('sodium').toLowerCase()}` : null].filter(Boolean).join(' · ');
-  return `<div class="card item${s.qty > 0 ? ' instock' : ''}"><div class="row between nowrap"><div class="grow"><b>${esc(it.brand)} ${esc(it.name)}</b>
-      <div class="meta"><span>${facts}</span><span>${esc(servingText(it))}</span>${it.mtc ? `<span class="pill coach">${t('gf')}</span>` : ''}${it.caffeineMg > 0 ? `<span class="pill open">${t('stock_caf')}</span>` : ''}</div></div>
+  return `<div class="card item${s.qty > 0 ? ' instock' : ''}"><div class="itop"><b class="grow">${nm}</b>
+      <button class="iconbtn more" data-act="sinfo" data-id="${esc(it.id)}" aria-label="${t('stock_more_info')}: ${nm}">⋯</button>
       <button class="iconbtn star" data-act="sfav" data-id="${esc(it.id)}" aria-pressed="${!!s.fav}" aria-label="${t('stock_fav')}: ${nm}">${s.fav ? '★' : '☆'}</button></div>
-    ${!a.ok ? `<p class="small err">${t('excl_' + a.why)}</p>` : ''}${it.food ? foodWeights(it) : ''}
-    <div class="row between"><div class="row stepper"><button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="-1" aria-label="${t('stock_less')}: ${nm}"${s.qty > 0 ? '' : ' disabled'}>−</button>
-      <input type="text" inputmode="numeric" class="qty" data-sqid="${esc(it.id)}" value="${s.qty || 0}" aria-label="${nm}">
-      <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}: ${nm}">+</button><span class="muted small">${it.food ? esc((foodById(it.id).unit || {})[lang()] || '') : t('u_' + it.category)}</span></div>
-      <span class="row">${it.own ? `<a class="linkbtn" href="#own/${encodeURIComponent(it.id)}">${t('own_edit_s')}</a>` : ''}<button class="linkbtn" data-act="shide" data-id="${esc(it.id)}">${s.hidden ? t('stock_unhide') : t('stock_hide')}</button></span></div></div>`;
+    <div class="ibot"><div class="meta grow"><span>${facts}</span>${it.caffeineMg > 0 ? `<span class="pill open">${t('caffeine_t')}</span>` : ''}</div>
+      <div class="row stepper"><button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="-1" aria-label="${t('stock_less')}: ${nm}"${s.qty > 0 ? '' : ' disabled'}>−</button>
+      <input type="text" inputmode="numeric" class="qty" data-sqid="${esc(it.id)}" value="${s.qty || 0}" aria-label="${nm} (${esc(unitOf(it))})">
+      <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}: ${nm}">+</button></div></div>
+    ${!a.ok ? `<p class="small err">${t('excl_' + a.why)}</p>` : ''}${it.food && it.missingWeight ? foodWeights(it) : ''}</div>`;
+}
+const unitOf = it => it.food ? ((foodById(it.id) || {}).unit || {})[lang()] || '' : t('u_' + it.category);
+/* the details of one product in a sheet: serving, carbohydrate types, caffeine note, weights (real food), edit, hide */
+function itemInfo(id) {
+  const it = itemById(id); if (!it) return;
+  const s = STOCK.get(id) || {}, a = DFMatch.allowed(it, P);
+  sheet(`<h2>${esc(`${it.brand} ${it.name}`.trim())}</h2>
+    <div class="meta"><span>${esc(servingText(it))}</span><span>${esc(unitOf(it))}</span>${it.mtc ? `<span class="pill coach">${t('gf')}</span>` : ''}</div>
+    ${it.caffeineMg > 0 ? `<p class="small">${t('stock_caf')}</p>` : ''}${!a.ok ? `<p class="small err">${t('excl_' + a.why)}</p>` : ''}
+    ${it.food ? foodWeights(it) : ''}
+    <div class="row">${it.own ? `<a class="btn" href="#own/${encodeURIComponent(id)}" data-act="closesheet">${t('own_edit_s')}</a>` : ''}
+      <button class="btn" data-act="shide" data-id="${esc(id)}">${s.hidden ? t('stock_unhide') : t('stock_hide')}</button></div>`);
 }
 /* real food: weight per part (the source weight is prefilled where one exists) + where the values come from */
 function foodWeights(it) {
@@ -574,16 +620,27 @@ function foodWeights(it) {
       <span class="tin"><input type="text" inputmode="decimal" data-gid="${esc(f.id)}" data-gi="${i}" value="${esc(ns(it.grams[i]))}" placeholder="?"><span>g</span></span></label>`).join('')}</div>
     <details class="inl small"><summary>${t('food_src')}</summary><ul class="plain small muted">${f.parts.map(p => `<li>${esc(p.ref)}${p.gSource ? ` · ${esc(p.gSource)}` : ''}</li>`).join('')}${f.mtcBasis ? `<li>${esc(f.mtcBasis)}</li>` : ''}</ul></details>`;
 }
-/* UX #1: "All / In stock" combined with a chip per kind; favourites first, then in stock (coach Q1, DFUi.filterStock) */
+/* UX #1: "All / In stock" combined with a chip per kind; favourites first, then in stock (coach Q1, DFUi.filterStock).
+   UX #17: a search field; typing redraws only the list, so the keyboard stays open. */
 function vStock() {
   const f = UI.stockFilter || 'all', items = libItems(), hasOwn = items.some(it => it.own);
   let cat = UI.stockCat || 'all'; if (cat === 'own' && !hasOwn) cat = 'all';
-  const st = id => STOCK.get(id) || {}, stObj = Object.fromEntries(STOCK);
+  const st = id => STOCK.get(id) || {};
   const catOpts = [['all', t('stock_allcat')]].concat(CATS.map(([c, key]) => [c, t(key)]), hasOwn ? [['own', t('own_t')]] : []);
-  let h = topbar(t('stock_t')) + `<p class="small muted">${t('stock_l')}</p>` + chips('stockFilter', [['all', t('stock_all')], ['in', t('stock_in')]], f, 's', 'sfilter', t('stock_t'))
+  let h = topbar(t('stock_t')) + `<p class="small muted">${t('stock_l')}</p>`
+    + `<input id="stockq" class="wxq" type="search" autocomplete="off" enterkeyhint="search" placeholder="${t('stock_search')}" aria-label="${t('stock_search')}" value="${esc(UI.stockQ || '')}">`
+    + chips('stockFilter', [['all', t('stock_all')], ['in', t('stock_in')]], f, 's', 'sfilter', t('stock_t'))
     + chips('stockCat', catOpts, cat, 's', 'scat', t('own_cat'));
   h += `<a class="btn wide" href="#own">${IC.plus}${t('own_add')}</a>`;
-  const list = DFUi.filterStock(items, stObj, { cat, inStock: f === 'in' });
+  h += `<div id="stocklist" class="stocklist">${stockListHtml(items, f, cat)}</div>`;
+  const hid = items.filter(it => st(it.id).hidden);
+  if (hid.length) h += `<details class="card"><summary>${t('stock_hidden', { n: hid.length })}</summary>${hid.map(itemRow).join('')}</details>`;
+  return h;
+}
+function stockListHtml(items, f, cat) {
+  items = items || libItems(); f = f || UI.stockFilter || 'all'; cat = cat || UI.stockCat || 'all';
+  const list = DFUi.filterStock(items, Object.fromEntries(STOCK), { cat, inStock: f === 'in', q: UI.stockQ || '' });
+  let h = '';
   if (cat === 'all') {
     const own = list.filter(it => it.own);
     if (own.length) h += `<h2 class="dayh">${t('own_t')}</h2>` + own.map(itemRow).join('');
@@ -591,11 +648,10 @@ function vStock() {
   } else h += list.map(itemRow).join('');
   if (!list.length) {
     // UX #18: an empty list says what to do next
-    if (f === 'in') h += `<div class="card notice"><p>${t('stock_none_in')}</p><div class="row"><button class="btn primary" data-act="sfilter" data-v="all">${t('stock_show_all')}</button></div></div>`;
+    if (UI.stockQ) h += `<p class="muted">${t('stock_none_q', { q: esc(UI.stockQ) })}</p>`;
+    else if (f === 'in') h += `<div class="card notice"><p>${t('stock_none_in')}</p><div class="row"><button class="btn primary" data-act="sfilter" data-v="all">${t('stock_show_all')}</button></div></div>`;
     else h += `<p class="muted">${t('stock_none_cat')}</p>`;
   }
-  const hid = items.filter(it => st(it.id).hidden);
-  if (hid.length) h += `<details class="card"><summary>${t('stock_hidden', { n: hid.length })}</summary>${hid.map(itemRow).join('')}</details>`;
   return h;
 }
 async function saveStock(id, patch) {
@@ -618,11 +674,13 @@ function vOwn(id) {
   const D = UI.own && UI.own.id === (id || null) ? UI.own : (UI.own = ownDraft(id));
   const u = D.unit, nf = (f, label, unit) => `<div class="fld"><label class="lbl" for="o-${f}">${label}</label><span class="tin"><input id="o-${f}" type="text" inputmode="decimal" data-own="${f}" value="${esc(ns(D[f]))}"><span>${unit}</span></span><span class="err">${UI.err['own_' + f] || ''}</span></div>`;
   const scan = canScan() ? `<button class="btn" data-act="offscan">${t('own_scan')}</button><button class="btn" data-act="offscanstop" hidden>${t('own_scan_stop')}</button>` : '';
+  // UX #20: scan first, required values first, the rest folded; the quantity on the form
+  if (D.qty == null) D.qty = id ? ((STOCK.get(id) || {}).qty || 0) : 1;
   return `${topbar(id ? t('own_edit') : t('own_new'), '#stock')}
     <section class="card"><h2>${t('own_bar')}</h2><p class="small muted">${t('own_bar_l')}</p>
+      ${scan ? `<div class="row">${scan.replace('class="btn" data-act="offscan"', 'class="btn primary" data-act="offscan"')}</div>` : ''}
       <div class="row nowrap"><input id="offcode" class="grow wxq" type="text" inputmode="numeric" autocomplete="off" placeholder="${t('own_code')}" aria-label="${t('own_code')}" value="${esc(D.code || '')}">
         <button class="btn" data-act="offsearch">${t('wx_search')}</button></div>
-      ${scan ? `<div class="row">${scan}</div>` : ''}
       <p class="msg${UI.offBad ? ' bad' : ''}" role="status">${esc(UI.offMsg || '')}</p><video id="offvideo" playsinline muted hidden style="width:100%;border-radius:12px"></video>
       <small class="muted">${t('own_off_attr')}</small></section>
     <section class="card">
@@ -633,11 +691,15 @@ function vOwn(id) {
         ${D.per100 ? `<small class="muted">${t('own_from_off')}</small>` : ''}<span class="err">${UI.err.own_amount || ''}</span></div>
       ${['drink', 'electrolyte'].includes(D.category) ? nf('waterMl', t('own_water'), 'ml') + nf('powderG', t('own_powder') + ` (${t('optional')})`, 'g') : ''}
       <h3>${t('own_per')}</h3>
-      ${nf('choG', t('cho'), 'g')}${nf('sugarsG', t('own_sugars'), 'g')}${nf('sodiumMg', t('sodium'), 'mg')}${D.sodiumMg == null ? nf('saltG', t('own_salt'), 'g') : ''}
-      ${nf('caffeineMg', t('caffeine_t'), 'mg')}${nf('kcal', t('own_kcal'), 'kcal')}${nf('proteinG', t('own_protein'), 'g')}${nf('fatG', t('own_fat'), 'g')}${nf('fibreG', t('own_fibre'), 'g')}
+      ${nf('choG', t('cho'), 'g')}${nf('sodiumMg', t('sodium'), 'mg')}${D.sodiumMg == null ? nf('saltG', t('own_salt'), 'g') : ''}${nf('caffeineMg', t('caffeine_t'), 'mg')}
       <div class="fld"><span class="lbl">${t('own_mtc')}</span>${chips('mtc', [[true, t('yes')], [null, t('unknown')]], D.mtc, 'm', 'ownset')}<small class="muted">${t('own_mtc_l')}</small></div>
       <div class="fld"><span class="lbl">${t('own_allerg')}</span><div class="chips" role="group">${DFBackup.EU14.map(a => `<button type="button" class="chip" data-act="owntog" data-f="allergens" data-v="${a}" aria-pressed="${D.allergens.includes(a)}">${t('a_' + a)}</button>`).join('')}</div></div>
-      <div class="fld"><span class="lbl">${t('own_traces')}</span><div class="chips" role="group">${DFBackup.EU14.map(a => `<button type="button" class="chip" data-act="owntog" data-f="traces" data-v="${a}" aria-pressed="${D.traces.includes(a)}">${t('a_' + a)}</button>`).join('')}</div></div>
+      <details class="inl" id="ownmore"${UI.ownMore ? ' open' : ''}><summary>${t('own_more')}</summary>
+        ${nf('sugarsG', t('own_sugars'), 'g')}${nf('kcal', t('own_kcal'), 'kcal')}${nf('proteinG', t('own_protein'), 'g')}${nf('fatG', t('own_fat'), 'g')}${nf('fibreG', t('own_fibre'), 'g')}
+        <div class="fld"><span class="lbl">${t('own_traces')}</span><div class="chips" role="group">${DFBackup.EU14.map(a => `<button type="button" class="chip" data-act="owntog" data-f="traces" data-v="${a}" aria-pressed="${D.traces.includes(a)}">${t('a_' + a)}</button>`).join('')}</div></div></details>
+      <div class="fld"><span class="lbl">${t('own_qty')}</span><div class="row stepper"><button type="button" class="iconbtn" data-act="ownqty" data-d="-1" aria-label="${t('stock_less')}"${D.qty > 0 ? '' : ' disabled'}>−</button>
+        <input type="text" inputmode="numeric" class="qty" data-own="qty" value="${D.qty}" aria-label="${t('own_qty')}">
+        <button type="button" class="iconbtn" data-act="ownqty" data-d="1" aria-label="${t('stock_more')}">+</button></div></div>
       <label class="check"><input type="checkbox" data-own="labelChecked"${D.labelChecked ? ' checked' : ''}><span>${t('own_check')}</span></label>
       <p class="err" role="alert">${UI.ownErr || ''}</p>
       <button class="btn primary big wide" data-act="ownsave">${t('save')}</button>
@@ -707,7 +769,7 @@ async function ownSave() {
     waterMl: D.waterMl, powderG: D.powderG, allergens: D.allergens, traces: D.traces, labelChecked: D.labelChecked, offCode: D.offCode });
   if (!o) { UI.ownErr = !D.labelChecked ? t('own_need_check') : t('own_need'); return rerender(); }
   const id = D.id || 'own-' + Date.now().toString(36);
-  await saveStock(id, { own: o });
+  await saveStock(id, { own: o, qty: D.qty || 0 });   // UX #20: the quantity is set on the form
   UI.own = null; UI.ownErr = ''; UI.offMsg = ''; location.hash = '#stock';
 }
 
@@ -722,13 +784,10 @@ function packLines(M) {
   });
 }
 /* pack list for one ride (matcher, MATCH-01..05) */
-function packCard(M, T, ctx, C, needRefill) {
-  const H = lang() === 'en' ? '/h' : '/u', R = DATA.rules.rules, hasStock = stockList().length > 0;
-  let h = `<section class="card"><h2>${t('sec_pack')}</h2>`;
+function packPart(M, T, C, needRefill, hasStock) {
+  const H = lang() === 'en' ? '/h' : '/u';
+  let h = `<h3>${t('sec_pack')}</h3>`;
   if (!hasStock && T.cho.gph > 0) h += `<p>${t('pack_nostock')} <a href="#stock">${t('tab_stock')}</a></p>`;
-  if (M.alternatives.length > 1) h += `<div class="fld"><span class="lbl">${t('plan_choose')}</span><div class="chips" role="group">${M.alternatives.map(a =>
-    `<button type="button" class="chip" data-act="rset" data-f="planKind" data-v="${a.kind}" data-t="s" aria-pressed="${a.chosen}">${t('plan_' + a.kind)} · ${a.choGph} g${H}</button>`).join('')}</div></div>`;
-  if (needRefill) h += `<div class="fld"><span class="lbl">${t('ride_refill')}</span>${chips('refillMin', [[0, t('refill_0')], [60, t('refill_n', { n: 60 })], [90, t('refill_n', { n: 90 })], [120, t('refill_n', { n: 120 })]], C.refillMin || 0, 'n', 'rset')}</div>`;
   const li = packLines(M).map(esc);
   if (li.length) h += `<ul class="plain">${li.map(x => `<li>${x}</li>`).join('')}</ul>`;
   if (hasStock && T.cho.gph > 0) h += `<p class="small muted">${t('pack_total', { c: M.totals.choGph, na: M.totals.naMgph, H })}</p>`;
@@ -743,11 +802,33 @@ function packCard(M, T, ctx, C, needRefill) {
   });
   M.notes.filter(n => n.key === 'sodium_high').forEach(n => warn.push(t('na_high', { mg: n.p.mgph, hi: n.p.hi, H })));
   if (warn.length) h += `<ul class="plain small warnlist">${warn.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  // UX #15: the list first, then the choices that change it
+  if (M.alternatives.length > 1) h += `<div class="fld"><span class="lbl">${t('plan_choose')}</span><div class="chips" role="group">${M.alternatives.map(a =>
+    `<button type="button" class="chip" data-act="rset" data-f="planKind" data-v="${a.kind}" data-t="s" aria-pressed="${a.chosen}">${t('plan_' + a.kind)} · ${a.choGph} g${H}</button>`).join('')}</div></div>`;
+  if (needRefill) h += `<div class="fld"><span class="lbl">${t('ride_refill')}</span>${chips('refillMin', [[0, t('refill_0')], [60, t('refill_n', { n: 60 })], [90, t('refill_n', { n: 90 })], [120, t('refill_n', { n: 120 })]], C.refillMin || 0, 'n', 'rset')}</div>`;
   const shop = (M.shopping || []).filter(s => s.for !== 'cho' || hasStock);
   if (shop.length) h += `<details class="inl"><summary>${t('shop')}</summary><ul class="plain small">${shop.map(s => s.items.map(i => `<li>${esc(itemName(i.id))}${i.n ? ` (${i.n}×)` : ''}</li>`).join('')).join('')}</ul></details>`;
   const ex = M.notes.filter(n => n.key === 'excluded');
   if (ex.length) h += `<ul class="plain small muted">${ex.map(n => `<li>${esc(itemName(n.p.id))}: ${t('excl_' + n.p.why)}</li>`).join('')}</ul>`;
-  return h + '</section>';
+  return h;
+}
+const stockQty = () => Object.fromEntries([...STOCK.values()].map(s => [s.id, s.qty || 0]));
+/* UX #19: apply (or undo) a "taken off the stock" change; the change list is kept on the ride record */
+async function useRidePack(undo) {
+  const id = rideIdFromHash(), r = id && findRide(id); if (!r) return;
+  const C = Object.assign({ id }, RIDES.get(id) || {});
+  if (undo) {
+    if (!C.used) return;
+    for (const x of C.used.items) await saveStock(x.id, { qty: ((STOCK.get(x.id) || {}).qty || 0) + (x.from - x.to) });
+    delete C.used; RIDES.set(id, C); await DB.put('rides', C); toast(t('used_undone'));
+  } else {
+    if (C.used) return;
+    const PL = ridePlan(r, true); if (PL.err) return;
+    const items = DFUi.usePack(PL.M.pack, stockQty()); if (!items.length) return;
+    for (const x of items) await saveStock(x.id, { qty: x.to });
+    C.used = { at: todayIso(), items }; RIDES.set(id, C); await DB.put('rides', C); toast(t('used_toast'));
+  }
+  rerender();
 }
 
 /* ---------- profile, settings, about ---------- */
@@ -827,7 +908,7 @@ addEventListener('pointerdown', () => { ptrDown = true; }, true);
 addEventListener('pointerup', () => { ptrDown = false; if (ptrPending) { ptrPending = false; setTimeout(rerender, 0); } }, true);
 addEventListener('pointercancel', () => { ptrDown = false; if (ptrPending) { ptrPending = false; setTimeout(rerender, 0); } }, true);
 const rerenderSoon = () => { if (ptrDown) ptrPending = true; else setTimeout(rerender, 0); };
-document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'cond') UI.condOpen = ev.target.open; }, true);
+document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'cond') UI.condOpen = ev.target.open; if (ev.target && ev.target.id === 'ownmore') UI.ownMore = ev.target.open; }, true);
 addEventListener('hashchange', () => { UI.iwMsg = ''; UI.iwBad = false; UI.iwOrig = null; UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (!/^#own/.test(location.hash)) { UI.own = null; UI.ownErr = ''; UI.offMsg = ''; } if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
 
 /* ---------- sheet, toast, update banner ---------- */
@@ -933,6 +1014,7 @@ document.addEventListener('change', async ev => {
     const D = UI.own, f = el.dataset.own;
     if (f === 'labelChecked') { D.labelChecked = el.checked; return; }
     if (f === 'name' || f === 'brand') { D[f] = el.value.trim(); return; }
+    if (f === 'qty') { const n = parseInt(el.value, 10); D.qty = isFinite(n) ? Math.max(0, Math.min(999, n)) : 0; return rerenderSoon(); }
     const s = String(el.value).trim().replace(',', '.'), x = +s, rg = OWN_NUM[f];
     if (s === '') { D[f] = null; delete UI.err['own_' + f]; }
     else if (!isFinite(x) || x < rg[0] || x > rg[1]) { UI.err['own_' + f] = t('err_range', { lo: ns(rg[0]), hi: ns(rg[1]) }); return rerenderSoon(); }
@@ -963,7 +1045,11 @@ document.addEventListener('change', async ev => {
 });
 /* UX #2: tapping a quantity selects it, so typing 6 replaces the 0 */
 document.addEventListener('focusin', ev => { const el = ev.target; if (el && el.classList && el.classList.contains('qty')) setTimeout(() => { try { el.select(); } catch (e) { } }, 0); });
-document.addEventListener('input', ev => { const el = ev.target; if (el.dataset && el.dataset.add && UI.add) UI.add[el.dataset.add] = el.value; });
+document.addEventListener('input', ev => {
+  const el = ev.target;
+  if (el.id === 'stockq') { UI.stockQ = el.value; const L = $('#stocklist'); if (L) L.innerHTML = stockListHtml(); return; }   // UX #17: only the list
+  if (el.dataset && el.dataset.add && UI.add) UI.add[el.dataset.add] = el.value;
+});
 
 document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]'); if (!el) return;
@@ -1005,7 +1091,8 @@ document.addEventListener('click', async ev => {
   }
   if (a === 'sqty') { const s = STOCK.get(el.dataset.id) || { qty: 0 }; await saveStock(el.dataset.id, { qty: (s.qty || 0) + (+el.dataset.d) }); return rerender(); }
   if (a === 'sfav') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { fav: !s.fav }); return rerender(); }
-  if (a === 'shide') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { hidden: !s.hidden }); return rerender(); }
+  if (a === 'shide') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { hidden: !s.hidden }); closeSheet(); toast(s.hidden ? t('stock_unhidden') : t('stock_hidden_t')); return rerender(); }
+  if (a === 'sinfo') return itemInfo(el.dataset.id);
   if (a === 'sfilter') { UI.stockFilter = el.dataset.v; return rerender(); }
   if (a === 'scat') { UI.stockCat = el.dataset.v; return rerender(); }
   if (a === 'wxsearch') {
@@ -1025,9 +1112,12 @@ document.addEventListener('click', async ev => {
   if (a === 'offscan' && UI.own) return offScan();
   if (a === 'offscanstop') { scanStop = true; return; }
   if (a === 'ownsave' && UI.own) return ownSave();
+  if (a === 'ownqty' && UI.own) { UI.own.qty = Math.max(0, Math.min(999, (UI.own.qty || 0) + (+el.dataset.d))); return rerender(); }
   if (a === 'owndel' && UI.own && UI.own.id) return sheet(`<h2>${t('own_del')}</h2><p>${esc(UI.own.name)}</p><button class="btn danger big wide" data-act="owndelgo">${t('own_del')}</button>`);
   if (a === 'owndelgo' && UI.own && UI.own.id) { const id = UI.own.id; STOCK.delete(id); await DB.del('items', id); closeSheet(); UI.own = null; location.hash = '#stock'; return; }
   if (a === 'bklater') { SET.backupSnooze = RD.addDays(todayIso(), 7); saveSet(); return rerender(); }
+  if (a === 'use') return useRidePack(false);
+  if (a === 'unuse') return useRidePack(true);
   if (a === 'iwsend') return iwWrite(false);
   if (a === 'iwremove') return iwWrite(true);
   if (a === 'bk' || a === 'bkkey') return doBackup(a === 'bkkey');
