@@ -20,7 +20,7 @@
     const md = await loadText('../docs/evidence-table.md');
     if (md == null) return;                                   // docs/ is not published: skipped on the test site
     const r = await load('data/rules.json');
-    const mdIds = [...md.matchAll(/^\| ([A-Z]+-[A-Z0-9-]+) \|/gm)].map(m => m[1]).filter(id => r.rules[id] || /^(CHO|INT|GOAL|TIME|FLU|NA|PRE|CAF|REC|EE|RND|MATCH|AGE|METH|HEAT)-/.test(id));
+    const mdIds = [...md.matchAll(/^\| ([A-Z]+-[A-Z0-9-]+) \|/gm)].map(m => m[1]).filter(id => r.rules[id] || /^(CHO|INT|GOAL|TIME|FLU|NA|PRE|CAF|REC|EE|RND|MATCH|AGE|METH|HEAT|MAN)-/.test(id));
     const jsonIds = Object.keys(r.rules);
     assert.deepEqual([...mdIds].sort(), [...jsonIds].sort());
     for (const id of jsonIds) {

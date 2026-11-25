@@ -49,6 +49,16 @@
     });
   });
 
+  test('rides: rides without blocks follow MAN-01 (endurance, coach), MAN-02 (recovery, proposed), MAN-03 (key/race, OPEN)', async () => {
+    const R = req('rides.js'), rules = (await load('data/rules.json')).rules;
+    const r = R.eventToRide(ev({ moving_time: 5400 }));
+    [['endurance', 'MAN-01', 'coach'], ['recovery', 'MAN-02', 'proposed'], ['key', 'MAN-03', 'open'], ['race', 'MAN-03', 'open']].forEach(([g, id, st]) => {
+      const d = R.workoutDoc(r, null, {}, g, rules);
+      assert.equal(d.manualRule, id, g); assert.equal(rules[id].status, st, id); assert.equal(d.manualZone, rules[id].zones[g]);
+      assert.equal(R.MANUAL_ZONE[g], rules[id].zones[g], `fallback table = ${id}`);
+    });
+  });
+
   test('rides: "next session within 8 h" from the calendar (REC-01); sessions without a time are ignored', async () => {
     const R = req('rides.js');
     const ride = R.eventToRide(ev({ id: 1, start_date_local: '2026-12-01T09:00:00', moving_time: 7200 }));

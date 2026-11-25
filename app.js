@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.2.1';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -281,7 +281,8 @@ function vRide(id) {
   if (!r) return `${topbar(t('rides_t'), '#rides')}<p class="muted">${t('rides_none')}</p>`;
   const X = rideContext(r), ctx = X.ctx, R = DATA.rules;
   const prof = Object.assign({}, P, { ftpW: P.ftpW || (ATH && ATH.ftp) || null });
-  const doc = RD.workoutDoc(r, ATH, prof, ctx.goalTag && ctx.goalTag !== 'trainlow' ? ctx.goalTag : ctx.goalChoice || 'endurance');
+  const doc = RD.workoutDoc(r, ATH, prof, ctx.goalTag && ctx.goalTag !== 'trainlow' ? ctx.goalTag : ctx.goalChoice || 'endurance', R.rules);
+  const manSt = doc.manualRule && R.rules[doc.manualRule] ? R.rules[doc.manualRule].status : null;   // MAN-03 (key/race) is OPEN
   const parsed = W.parse(doc);
   if (!parsed.ok) return `${topbar(r.name, '#rides')}<div class="card badc"><p>${t('w_parse')}</p></div>`;
   const T = E.plan({ parsed, ctx, profile: prof, rules: R });
@@ -309,7 +310,7 @@ function vRide(id) {
     <div class="fld"><label class="lbl" for="r-start">${t('ride_start')}</label><span class="tin time"><input id="r-start" type="time" data-rf="start" value="${esc(X.start || '')}"></span></div>
     <div class="fld"><label class="lbl" for="r-temp">${t('ride_temp')} (${t('optional')})</label><span class="tin"><input id="r-temp" type="text" inputmode="decimal" data-rf="tempC" value="${esc(ns(C.tempC))}"><span>°C</span></span><span class="err" role="alert">${UI.err.tempC || ''}</span></div>
     <div class="fld"><span class="lbl">${t('ride_next')}</span>${chips('next8h', [[true, t('yes')], [false, t('no')]], ctx.next8h, 'b', 'rset')}${X.found ? `<small class="muted">${t('ride_next_found')}</small>` : ''}</div>
-    ${!r.structured ? `<p class="small muted">${t('ride_manual_int', { z: doc.manualZone })}</p>` : ''}
+    ${!r.structured ? `<p class="small muted">${t('ride_manual_int', { z: doc.manualZone })} ${statusPill(manSt)}</p>` : ''}
     ${r.source === 'man' ? `<button class="btn danger" data-act="rdel">${t('ride_delete')}</button>` : ''}
     ${r.description ? `<details class="inl"><summary>${t('ride_desc')}</summary><p class="small" style="white-space:pre-wrap">${esc(r.description)}</p></details>` : ''}</details>`;
 
@@ -336,7 +337,7 @@ function vRide(id) {
 
   /* timing */
   const every = R.rules['TIME-02'].everyMin, drinkMl = F.roundTo(fl.mlph * every / 60, R.rules['RND-01'].fluidMl);
-  h += `<section class="card"><h2>${t('sec_timing')}</h2>${T.slots.length ? `<div class="slots">${T.slots.map(s => `<div class="slotr"><b>${X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min })}</b>
+  h += `<section class="card"><h2>${t('sec_timing')} ${statusPill(manSt)}</h2>${T.slots.length ? `<div class="slots">${T.slots.map(s => `<div class="slotr"><b>${X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min })}</b>
     <span>${s.sustained ? t('slot_sustained') : s.easy ? t('slot_food') : t('slot_gel')}${drinkMl ? ` · ${t('slot_drink', { ml: drinkMl })}` : ''}</span></div>`).join('')}</div>` : `<p class="muted">${t('slot_none')}</p>`}</section>`;
 
   /* before / after / energy */
@@ -346,7 +347,7 @@ function vRide(id) {
 
   /* why */
   const ids = [];
-  [c.rules, fl.rules, na.rules, T.caffeine.rules, T.pre.rules, T.post.rules, ...T.slots.map(s => s.rules), T.energy.rules, T.intensity.rules].forEach(l => (l || []).forEach(x => { if (!ids.includes(x)) ids.push(x); }));
+  [c.rules, fl.rules, na.rules, T.caffeine.rules, T.pre.rules, T.post.rules, ...T.slots.map(s => s.rules), T.energy.rules, T.intensity.rules, doc.manualRule ? [doc.manualRule] : []].forEach(l => (l || []).forEach(x => { if (!ids.includes(x)) ids.push(x); }));
   h += `<details class="card"><summary>${t('sec_why')}</summary><p class="small muted">${t('why_rules')}</p><div class="why">${ids.map(id => {
     const ru = R.rules[id] || {}; return `<div class="r${ru.status === 'open' ? ' open' : ''}"><span>${esc(ruleText(id))}</span><span><code>${id}</code> ${ru.status === 'open' ? `<span class="pill open">${t('open_badge')}</span>` : ru.status === 'coach' ? `<span class="pill coach">${t('coach_badge')}</span>` : ''}</span></div>`; }).join('')}</div>
     <p class="small"><a href="#about">${t('ref_t')}</a></p></details>`;

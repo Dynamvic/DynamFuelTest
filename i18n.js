@@ -282,6 +282,7 @@
     'EE-01': 'Je lichaam rendeert 20–25 %: 1 kJ arbeid ≈ 1 kcal verbruik (Ettema & Lorås 2009). Alleen ter info.',
     'HEAT-01': 'Koele drank helpt bij warmte (McCubbin 2020).', 'HEAT-02': 'Warme dag (vanaf {hotC} °C) en zweetverlies onbekend: {lph} l/u (regel van je coach).',
     'RND-01': 'Afgerond: koolhydraten op 5 g, vocht op 50 ml, natrium op 50 mg, cafeïne op 25 mg.',
+    'MAN-01': 'Duurrit zonder blokken: de app rekent met een constante intensiteit in zone 2 (regel van je coach).', 'MAN-02': 'Herstelrit zonder blokken: de app rekent met zone 1 (voorstel, nog te bevestigen door je coach).', 'MAN-03': 'Kernsessie of wedstrijd zonder blokken: de intensiteit is niet gekend; de app rekent voorlopig met zone 4 (nog te bevestigen).',
     'METH-IF': 'Intensiteit (IF) berekend uit de geplande blokken.', 'GOAL-01': 'Zonder tag stelt de app een soort rit voor.', 'AGE-01': 'Alleen je geboortejaar is bekend: wie in het ritjaar 18 wordt, telt nog als onder 18 (veilige kant).'
   };
   const ren = {
@@ -328,6 +329,7 @@
     'EE-01': 'Your body is 20–25 % efficient: 1 kJ of work ≈ 1 kcal used (Ettema & Lorås 2009). For information only.',
     'HEAT-01': 'Cool drinks help in the heat (McCubbin 2020).', 'HEAT-02': 'Hot day (from {hotC} °C) and sweat loss unknown: {lph} l/h (your coach\'s rule).',
     'RND-01': 'Rounded: carbohydrate to 5 g, fluid to 50 ml, sodium to 50 mg, caffeine to 25 mg.',
+    'MAN-01': 'Endurance ride without blocks: the app assumes a steady intensity in zone 2 (your coach\'s rule).', 'MAN-02': 'Recovery ride without blocks: the app assumes zone 1 (proposal, your coach still has to confirm).', 'MAN-03': 'Key session or race without blocks: the intensity is not known; the app uses zone 4 for now (to confirm).',
     'METH-IF': 'Intensity (IF) calculated from the planned blocks.', 'GOAL-01': 'Without a tag the app suggests a type of ride.', 'AGE-01': 'Only your birth year is known: if you turn 18 in the ride year, you still count as under 18 (safe side).'
   };
   Object.keys(rnl).forEach(k => { nl['r_' + k] = rnl[k]; });

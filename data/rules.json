@@ -1,7 +1,7 @@
 {
   "app": "dynamfuel",
   "kind": "rules",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "date": "24-11-2026",
   "mirrors": "docs/evidence-table.md (same IDs)",
   "status": {
@@ -131,6 +131,9 @@
     "MATCH-04": { "title": "The athlete chooses between plans: with drink, or gels/food only", "status": "coach", "confidence": "high", "refs": ["COACH"],
       "use": "case 06 review C6 + case 07 review E3: the matcher returns the best drink-only, drink + food and without-drink plans; the drink + food plan is shown first when it fits ± 10 %" },
     "AGE-01": { "title": "Under 18 when ride year − birth year ≤ 18", "status": "coach", "confidence": "high", "refs": ["COACH"], "use": "only the birth year is stored, so an 18-year-old born late in the year is treated as under 18 (safe side)" },
+    "MAN-01": { "title": "Ride without blocks, endurance: one steady step in Z2", "status": "coach", "confidence": "low", "refs": ["COACH"], "zones": { "endurance": 2 }, "use": "Phase 2 P1, confirmed by the coach 25-11-2026 for endurance rides. Only timing and the intensity checks use it; carbohydrate follows the duration band" },
+    "MAN-02": { "title": "Ride without blocks, recovery: one steady step in Z1", "status": "proposed", "confidence": "low", "refs": ["COACH"], "zones": { "recovery": 1 }, "use": "Phase 2 P1, Claude proposal; not yet answered by the coach" },
+    "MAN-03": { "title": "Ride without blocks, key session or race: intensity not known", "status": "open", "confidence": "low", "refs": ["COACH"], "zones": { "key": 4, "race": 4 }, "use": "Phase 2 P1: left OPEN by the coach 25-11-2026 (to-do). Until decided the app calculates with one steady step in Z4 and shows the result as OPEN – to confirm" },
     "METH-IF": { "title": "Intensity factor from planned steps (30-s rolling, 4th-power mean)", "status": "coach", "confidence": "moderate", "refs": [], "use": "normalised-power method applied to the planned steps; method choice, no nutrition value" }
   }
 }
