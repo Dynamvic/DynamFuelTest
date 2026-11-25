@@ -4,11 +4,11 @@
    this site's old DynamFuel caches are deleted – never DynamCore's, never the other DynamFuel site's.
    An old DynamCore (before dynamcore-v17) may delete this cache once: the page then asks this worker to re-cache (message
    'recache'), and every successful network answer is cached again anyway. */
-const VERSION = 'v5';
+const VERSION = 'v6';
 const SITE = (new URL(self.registration.scope).pathname.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'root').toLowerCase();
 const PREFIX = `dynamfuel-${SITE}-`;
 const CACHE = PREFIX + VERSION;
-const CORE = ['./', 'index.html', 'app.js', 'i18n.js', 'fmt.js', 'workout.js', 'engine.js', 'match.js', 'rides.js', 'backup.js', 'db.js', 'access.js', 'key.js',
+const CORE = ['./', 'index.html', 'app.js', 'i18n.js', 'fmt.js', 'workout.js', 'engine.js', 'match.js', 'rides.js', 'backup.js', 'db.js', 'weather.js', 'card.js', 'access.js', 'key.js',
   'manifest.webmanifest', 'data/rules.json', 'data/library.json',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/logo-dark.png', 'icons/logo-light.png',
   'fonts/poppins-600.woff', 'fonts/poppins-700.woff', 'fonts/poppins-800.woff', 'fonts/inter-400.woff', 'fonts/inter-500.woff', 'fonts/inter-600.woff'];

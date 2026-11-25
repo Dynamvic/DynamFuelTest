@@ -56,6 +56,13 @@
     out.lang = ['nl', 'en'].includes(s.lang) ? s.lang : (s.lang !== undefined && fixed++, d.lang);
     out.usualStart = s.usualStart == null ? null : isHHMM(s.usualStart) ? s.usualStart : (fixed++, null);
     out.onboarded = typeof s.onboarded === 'boolean' ? s.onboarded : d.onboarded;
+    // town for the forecast (P3-4): name + rounded coordinates only
+    const L = s.location;
+    if (L != null) {
+      if (L && typeof L === 'object' && typeof L.name === 'string' && L.name.length <= 100 && numIn(L.lat, -90, 90) && numIn(L.lon, -180, 180))
+        out.location = { name: L.name, region: typeof L.region === 'string' ? L.region.slice(0, 120) : '', lat: +L.lat, lon: +L.lon };
+      else fixed++;
+    }
     return { s: out, fixed };
   }
   function checkAthlete(a) {

@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.3.1';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -281,6 +281,8 @@ function vRide(id) {
   const r = id && findRide(id);
   if (!r) return `${topbar(t('rides_t'), '#rides')}<p class="muted">${t('rides_none')}</p>`;
   const X = rideContext(r), ctx = X.ctx, R = DATA.rules;
+  const fc = forecastFor(r, X);                                           // P3-4: own value wins, else the forecast
+  if (ctx.tempC == null && fc && fc.temp != null) ctx.tempC = fc.temp;
   const prof = Object.assign({}, P, { ftpW: P.ftpW || (ATH && ATH.ftp) || null });
   const doc = RD.workoutDoc(r, ATH, prof, ctx.goalTag && ctx.goalTag !== 'trainlow' ? ctx.goalTag : ctx.goalChoice || 'endurance', R.rules);
   const manSt = doc.manualRule && R.rules[doc.manualRule] ? R.rules[doc.manualRule].status : null;   // MAN-03 (key/race) is OPEN
@@ -309,7 +311,10 @@ function vRide(id) {
       : chips('goal', E.GOALS.map(g => [g, t('g_' + g)]), goal, 's', 'rset') + (T.goal.source === 'suggested' ? `<small class="muted">${t('goal_sug')}</small>` : '')}</div>
     ${r.type === 'VirtualRide' ? '' : `<div class="fld"><span class="lbl">${t('ride_io')}</span>${chips('indoor', [[true, t('indoor')], [false, t('outdoor')]], X.indoor, 'b', 'rset')}</div>`}
     <div class="fld"><label class="lbl" for="r-start">${t('ride_start')}</label><span class="tin time"><input id="r-start" type="time" data-rf="start" value="${esc(X.start || '')}"></span></div>
-    <div class="fld"><label class="lbl" for="r-temp">${t('ride_temp')} (${t('optional')})</label><span class="tin"><input id="r-temp" type="text" inputmode="decimal" data-rf="tempC" value="${esc(ns(C.tempC))}"><span>°C</span></span><span class="err" role="alert">${UI.err.tempC || ''}</span></div>
+    <div class="fld"><label class="lbl" for="r-temp">${t('ride_temp')} (${t('optional')})</label><span class="tin"><input id="r-temp" type="text" inputmode="decimal" data-rf="tempC" value="${esc(ns(C.tempC))}" placeholder="${fc && fc.temp != null ? esc(ns(fc.temp)) : ''}"><span>°C</span></span>
+      ${fc ? `<small class="muted">${fc.pending ? t('wx_loading') : fc.temp != null ? t('wx_fc', { t: ns(fc.temp), place: esc(fc.place) }) + (C.tempC != null ? ' ' + t('wx_own') : '') : t('wx_none')}</small>`
+        : !SET.location && X.indoor === false ? `<small class="muted"><a href="#settings">${t('wx_set')}</a></small>` : ''}
+      <span class="err" role="alert">${UI.err.tempC || ''}</span></div>
     <div class="fld"><span class="lbl">${t('ride_next')}</span>${chips('next8h', [[true, t('yes')], [false, t('no')]], ctx.next8h, 'b', 'rset')}${X.found ? `<small class="muted">${t('ride_next_found')}</small>` : ''}</div>
     ${!r.structured ? `<p class="small muted">${t('ride_manual_int', { z: doc.manualZone })} ${statusPill(manSt)}</p>` : ''}
     ${r.source === 'man' ? `<button class="btn danger" data-act="rdel">${t('ride_delete')}</button>` : ''}
@@ -327,7 +332,8 @@ function vRide(id) {
   if (c.mtcRequired) notes.push(t('cho_mtc', { max: R.rules['CHO-MTC-01'].glucoseOnlyMaxGph }));
   if (c.gutAdvice) notes.push(t('cho_gut', { guide: c.guideline, tol: ns(P.gutCapGph) }));
   if (T.warnings.includes('notolerance')) notes.push(`${t('cho_notol')} <a href="#profile">${t('tab_profile')}</a>`);
-  if (T.warnings.includes('heat_cool_drinks')) notes.push(t('w_heat', { c: R.rules['HEAT-01'].coolC }));
+  // HEAT-01 tip only on a hot day (HEAT-02 hotC, the coach's threshold) – with the forecast every outdoor ride has a temperature (todo T7)
+  if (T.warnings.includes('heat_cool_drinks') && ctx.tempC != null && ctx.tempC >= R.rules['HEAT-02'].hotC) notes.push(t('w_heat', { c: R.rules['HEAT-01'].coolC }));
   if (r.carbsPerHour) notes.push(t('ride_carbs_icu', { g: ns(r.carbsPerHour) }));
   h += `<section class="card"><h2>${t('sec_during')}</h2><div class="big3">
     <div class="tile"><span class="k">${t('cho')}</span><span class="v">${c.gph}<small> g${hpart}</small></span><span class="s">${c.gph || c.optional ? t('range', { lo: c.lo, hi: c.hi }) : ''}</span>${statusPill(c.status)}</div>
@@ -351,6 +357,26 @@ function vRide(id) {
   h += `<section class="card"><h2>${t('sec_after')}</h2>${postText(T.post)}</section>`;
   if (T.energy.kJ) h += `<section class="card"><h2>${t('sec_energy')}</h2><p class="small">${t('energy', { kj: T.energy.kJ, k1: T.energy.kcal[0], k2: T.energy.kcal[1] })}</p></section>`;
 
+  /* fuel card (image) + top-tube sticker (P3-3): plain-text model of what this screen shows */
+  const slotsPlain = T.slots.map((s, i) => {
+    const sc = M.schedule[i] || { eat: [], drinkMl }, useStock = withStock && T.cho.gph > 0;
+    const kind = s.sustained ? t('slot_sustained') : s.easy ? t('slot_food') : t('slot_gel');
+    const shortEat = sc.eat.map(e => (itemById(e.id) || {}).name || e.id).join(' + ');
+    return { time: X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min }), what: useStock ? sc.eat.map(e => itemName(e.id)).join(' + ') : kind,
+      short: (useStock ? shortEat : '') || (sc.drinkMl ? `${sc.drinkMl} ml` : ''), drink: sc.drinkMl ? t('slot_drink', { ml: sc.drinkMl }) : '' };
+  });
+  const cafOpen = (T.caffeine.on || T.caffeine.optional) && T.caffeine.status === 'open';
+  UI.fuel = { title: r.name || t('g_' + goal), meta: [dayLabel(r.date), X.start || '', F.dur(parsed.durationS), t('g_' + goal)].filter(Boolean).join(' · '),
+    metaShort: `${F.date(r.date)} ${X.start || ''}`.trim(), target: `${c.gph} g${hpart} · ${fl.mlph} ml${hpart}`,
+    tiles: [{ k: t('cho'), v: String(c.gph), u: 'g' + hpart, s: c.gph || c.optional ? t('range', { lo: c.lo, hi: c.hi }) : '' },
+      { k: t('fluid'), v: String(fl.mlph), u: 'ml' + hpart, s: t('total_ml', { ml: fl.totalMl }) },
+      { k: t('sodium'), v: na.none ? '–' : String(na.mgph), u: na.none ? '' : 'mg' + hpart, s: '' }],
+    caf: `${t('caffeine_t')}: ${cafLines(T.caffeine).join('; ')}${cafOpen ? ` (${t('open_badge')})` : ''}`, cafOpen,
+    pack: withStock || T.cho.gph === 0 ? packLines(M) : [], slots: slotsPlain, pre: preLines(T.pre), post: postLines(T.post),
+    hPack: t('sec_pack'), hTiming: t('sec_timing'), hBefore: t('sec_before'), hAfter: t('sec_after'), sub: t('app_sub'), foot: t('card_foot'),
+    fileName: `dynamfuel-${r.date}-${String(r.name || goal).replace(/[^A-Za-z0-9]+/g, '-').slice(0, 30)}.png` };
+  h += `<div class="row noprint"><button class="btn primary" data-act="card">${t('card_share')}</button><button class="btn" data-act="sticker">${t('card_sticker')}</button></div>`;
+
   /* why */
   const ids = [];
   [c.rules, fl.rules, na.rules, T.caffeine.rules, T.pre.rules, T.post.rules, ...T.slots.map(s => s.rules), T.energy.rules, T.intensity.rules, doc.manualRule ? [doc.manualRule] : [], stockList().length ? ['MATCH-01', 'MATCH-02', 'MATCH-03', 'MATCH-04', 'MATCH-05'] : []].forEach(l => (l || []).forEach(x => { if (!ids.includes(x)) ids.push(x); }));
@@ -362,14 +388,55 @@ function vRide(id) {
 function cafText(cf) {
   if (cf.optional) return `<p>${t('caf_opt')}</p>`;
   if (cf.off) return `<p class="muted">${t('caf_off_' + cf.off)}</p>`;
+  return ul(cafLines(cf));
+}
+function cafLines(cf) {
+  if (cf.optional) return [t('caf_opt')];
+  if (cf.off) return [t('caf_off_' + cf.off)];
   const out = cf.doses.map(d => d.clock ? t('caf_on', { mg: d.mg, mgkg: ns(d.mgkg), clock: d.clock }) + (d.atMin < 0 ? ` (${t('caf_before', { n: -d.atMin })})` : '')
     : d.atMin < 0 ? `${d.mg} mg (${ns(d.mgkg)} mg/kg) – ${t('caf_before', { n: -d.atMin })}` : t('caf_at', { mg: d.mg, mgkg: ns(d.mgkg), min: d.atMin }));
   cf.dropped.forEach(d => out.push(t('caf_dropped', { mg: d.mg, clock: d.clock || '' })));
   if (!cf.doses.some(d => d.clock) && cf.doses.length && !cf.rules.includes('CAF-06')) out.push(t('caf_notime'));
-  return `<ul class="plain">${out.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  return out;
 }
-function preText(p) {
-  if (!p.applies) return `<p>${t('pre_short')}</p>`;
+
+/* ---------- forecast temperature (Open-Meteo, P3-4) ---------- */
+const WX = store.get('wx', {}) || {};
+const saveWx = () => { const keep = Object.entries(WX).sort((a, b) => b[1].at - a[1].at).slice(0, 20); Object.keys(WX).forEach(k => { if (!keep.some(e => e[0] === k)) delete WX[k]; }); store.set('wx', WX); };
+UI.wxBusy = {};
+function forecastFor(r, X) {
+  const L = SET.location; if (!L || X.indoor !== false || !X.start || !r.date) return null;
+  const diff = Math.round((Date.parse(r.date + 'T00:00:00Z') - Date.parse(todayIso() + 'T00:00:00Z')) / 86400000);
+  if (!DFWeather.inRange(diff)) return null;
+  const key = `${L.lat},${L.lon},${r.date}`, c = WX[key];
+  if (!c || Date.now() - c.at > 3 * 3600e3) setTimeout(() => fetchWx(key, L, r.date, diff), 0);
+  if (!c) return UI.wxBusy[key] === 'fail' ? { temp: null, place: L.name } : { pending: true, place: L.name };
+  return { temp: DFWeather.maxDuring(c.hourly, r.date, X.start, r.durationS), place: L.name };
+}
+async function fetchWx(key, L, date, diff) {
+  if (UI.wxBusy[key]) return;
+  UI.wxBusy[key] = 'busy';
+  try {
+    const res = await fetch(DFWeather.forecastUrl(L.lat, L.lon, date, diff < DFWeather.DAYS - 1 ? RD.addDays(date, 1) : date));
+    if (!res.ok) throw new Error(res.status);
+    const j = await res.json();
+    WX[key] = { hourly: { time: j.hourly.time, temperature_2m: j.hourly.temperature_2m }, at: Date.now() }; saveWx();
+    delete UI.wxBusy[key];
+  } catch (e) { UI.wxBusy[key] = 'fail'; setTimeout(() => { if (UI.wxBusy[key] === 'fail') delete UI.wxBusy[key]; }, 5 * 60e3); }
+  if (/^#ride\//.test(location.hash)) rerender();
+}
+function wxCard() {
+  const L = SET.location;
+  return `<section class="card"><h2>${t('set_wx')}</h2><p class="small">${t('set_wx_l')}</p>
+    ${L ? `<div class="row between"><p><b>${esc(L.name)}</b> <span class="small muted">${esc(L.region)}</span></p><button class="btn" data-act="wxclear">${t('wx_clear')}</button></div>` : ''}
+    <div class="row nowrap"><input id="wxq" class="grow wxq" type="text" autocomplete="off" placeholder="${t('wx_town')}" aria-label="${t('wx_town')}" value="${esc(UI.wxQ || '')}"><button class="btn" data-act="wxsearch">${t('wx_search')}</button></div>
+    ${UI.wxPlaces ? (UI.wxPlaces.length ? `<div class="chips">${UI.wxPlaces.map((p, i) => `<button class="chip" data-act="wxpick" data-i="${i}">${esc(p.name)} <span class="small">(${esc(p.region)})</span></button>`).join('')}</div>` : `<p class="small muted">${t('wx_noplace')}</p>`) : ''}
+    <p class="msg${UI.wxBad ? ' bad' : ''}" role="status">${esc(UI.wxMsg || '')}</p><small class="muted">${t('wx_attr')}</small></section>`;
+}
+const ul = lines => `<ul class="plain">${lines.map(x => `<li>${x}</li>`).join('')}</ul>`;
+const preText = p => ul(preLines(p)), postText = p => ul(postLines(p));
+function preLines(p) {
+  if (!p.applies) return [t('pre_short')];
   const win = p.window ? ' ' + t('pre_window', { a: p.window[0], b: p.window[1] }) : '';
   const fwin = p.fluidWindow ? t('pre_window', { a: p.fluidWindow[0], b: p.fluidWindow[1] }) : '';
   const lines = [];
@@ -377,15 +444,15 @@ function preText(p) {
   else if (p.kind === 'normal') lines.push(t('pre_normal', { g: p.g[0], gkg: ns(p.gkg[0]), h1: p.hoursBefore[0], h2: p.hoursBefore[1] }) + (p.window ? ` (${t('pre_window', { a: p.window[0], b: p.window[1] })})` : ''));
   else lines.push(t('pre_fuel', { g1: p.g[0], g2: p.g[1], k1: ns(p.gkg[0]), k2: ns(p.gkg[1]) }) + win);
   if (p.fluidMl) lines.push(t('pre_fluid', { a: p.fluidMl[0], b: p.fluidMl[1], w: fwin }));
-  return `<ul class="plain">${lines.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  return lines;
 }
-function postText(p) {
+function postLines(p) {
   const lines = [];
   if (p.kind === 'water') lines.push(t('post_water'));
   else if (p.kind === 'rapid') lines.push(p.choGph ? t('post_rapid', { g1: p.choGph[0], g2: p.choGph[1], h: p.hours, p: p.proteinG }) : t('w_nomass'));
   else lines.push(p.proteinG ? t('post_normal', { p1: p.proteinG[0], p2: p.proteinG[1], h: p.withinH }) : t('w_nomass'));
   lines.push(p.rehydrateMl ? t('post_rehyd_ml', { a: p.rehydrateMl[0], b: p.rehydrateMl[1] }) : t('post_rehyd'));
-  return `<ul class="plain">${lines.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  return lines;
 }
 
 /* ---------- stock (library + what the athlete has) ---------- */
@@ -432,6 +499,16 @@ async function saveStock(id, patch) {
   STOCK.set(id, s); await DB.put('items', s);
 }
 
+/* the pack list as plain text lines (also used by the fuel card and sticker) */
+function packLines(M) {
+  return M.pack.map(p => {
+    if (p.refill) return t(M.bottles.some(b => b.content === 'drink') ? 'pack_refill' : 'pack_refill_water', { n: p.bottles });
+    if (!p.bottle) return `${p.n}× ${itemName(p.id)}`;
+    if (p.content === 'drink') return t('pack_drink', { n: p.bottles, name: itemName(p.id), d: ns(p.doses), ml: M.bottleMl }) + (p.powderG ? ` (${t('pack_powder', { g: ns(p.powderG) })})` : '');
+    if (p.content === 'electrolyte') return t('pack_tab', { n: p.bottles, k: p.tabs, name: itemName(p.id) });
+    return t('pack_water', { n: p.bottles, ml: M.bottleMl });
+  });
+}
 /* pack list for one ride (matcher, MATCH-01..05) */
 function packCard(M, T, ctx, C, needRefill) {
   const H = lang() === 'en' ? '/h' : '/u', R = DATA.rules.rules, hasStock = stockList().length > 0;
@@ -440,13 +517,7 @@ function packCard(M, T, ctx, C, needRefill) {
   if (M.alternatives.length > 1) h += `<div class="fld"><span class="lbl">${t('plan_choose')}</span><div class="chips" role="group">${M.alternatives.map(a =>
     `<button type="button" class="chip" data-act="rset" data-f="planKind" data-v="${a.kind}" data-t="s" aria-pressed="${a.chosen}">${t('plan_' + a.kind)} · ${a.choGph} g${H}</button>`).join('')}</div></div>`;
   if (needRefill) h += `<div class="fld"><span class="lbl">${t('ride_refill')}</span>${chips('refillMin', [[0, t('refill_0')], [60, t('refill_n', { n: 60 })], [90, t('refill_n', { n: 90 })], [120, t('refill_n', { n: 120 })]], C.refillMin || 0, 'n', 'rset')}</div>`;
-  const li = M.pack.map(p => {
-    if (p.refill) return t(M.bottles.some(b => b.content === 'drink') ? 'pack_refill' : 'pack_refill_water', { n: p.bottles });
-    if (!p.bottle) return `${p.n}× ${esc(itemName(p.id))}`;
-    if (p.content === 'drink') return t('pack_drink', { n: p.bottles, name: esc(itemName(p.id)), d: ns(p.doses), ml: M.bottleMl }) + (p.powderG ? ` (${t('pack_powder', { g: ns(p.powderG) })})` : '');
-    if (p.content === 'electrolyte') return t('pack_tab', { n: p.bottles, k: p.tabs, name: esc(itemName(p.id)) });
-    return t('pack_water', { n: p.bottles, ml: M.bottleMl });
-  });
+  const li = packLines(M).map(esc);
   if (li.length) h += `<ul class="plain">${li.map(x => `<li>${x}</li>`).join('')}</ul>`;
   if (hasStock && T.cho.gph > 0) h += `<p class="small muted">${t('pack_total', { c: M.totals.choGph, na: M.totals.naMgph, H })}</p>`;
   const strong = M.bottles.find(b => b.veryConcentrated);
@@ -485,6 +556,7 @@ function vSettings() {
     <section class="card"><h2>${t('set_lang')}</h2>${chips('lang', [['nl', 'Nederlands'], ['en', 'English']], lang(), 's', 'lang')}</section>
     <section class="card"><h2>${t('set_icu')}</h2>${secIcu()}</section>
     <section class="card"><div class="fld"><label class="lbl" for="s-start">${t('set_start')}</label><span class="tin time"><input id="s-start" type="time" data-set="usualStart" value="${esc(SET.usualStart || '')}"></span><small class="muted">${t('set_start_hint')}</small></div></section>
+    ${wxCard()}
     <section class="card"><h2>${t('set_backup')}</h2><p class="small">${t('bk_l')}</p>
       <div class="row"><button class="btn primary" data-act="bk">${t('bk_file')}</button>${ICU.key ? `<button class="btn" data-act="bkkey">${t('bk_file_key')}</button>` : ''}</div>
       ${ICU.key ? `<p class="small muted">${t('bk_key_warn')}</p>` : ''}
@@ -665,6 +737,17 @@ document.addEventListener('click', async ev => {
   if (a === 'sfav') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { fav: !s.fav }); return rerender(); }
   if (a === 'shide') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { hidden: !s.hidden }); return rerender(); }
   if (a === 'sfilter') { UI.stockFilter = el.dataset.v; return rerender(); }
+  if (a === 'wxsearch') {
+    const q = ($('#wxq').value || '').trim(); UI.wxQ = q; UI.wxPlaces = null; UI.wxBad = false; if (!q) return;
+    UI.wxMsg = t('loading'); rerender();
+    try { const res = await fetch(DFWeather.geoUrl(q, lang())); if (!res.ok) throw 0; UI.wxPlaces = DFWeather.places(await res.json()); UI.wxMsg = ''; }
+    catch (e) { UI.wxMsg = t('wx_err'); UI.wxBad = true; }
+    return rerender();
+  }
+  if (a === 'wxpick') { const pl = UI.wxPlaces && UI.wxPlaces[+el.dataset.i]; if (pl) { SET.location = pl; saveSet(); UI.wxPlaces = null; UI.wxQ = ''; UI.wxMsg = t('saved'); UI.wxBad = false; } return rerender(); }
+  if (a === 'wxclear') { delete SET.location; saveSet(); return rerender(); }
+  if (a === 'card' && UI.fuel) { const r = await DFCard.share(UI.fuel); if (r === 'saved') toast(t('card_saved')); return; }
+  if (a === 'sticker' && UI.fuel) return DFCard.print(UI.fuel, esc);
   if (a === 'bk' || a === 'bkkey') return doBackup(a === 'bkkey');
   if (a === 'rsgo') return doRestore();
   if (a === 'erase') return sheet(`<h2>${t('erase_sure')}</h2><p>${t('erase_l')}</p><button class="btn danger big wide" data-act="erasego">${t('erase_go')}</button>`);

@@ -120,8 +120,8 @@
 
     /* about */
     about_t: 'Over DynamFuel', about_l: 'DynamFuel is een gratis app van DynamVic Cycling coach. Je krijgt per geplande rit een voedingsplan dat steunt op wetenschappelijke richtlijnen. Elk getal heeft een bron of een regel van je coach.',
-    privacy_t: 'Privacy', privacy: 'Geen account, geen reclame, geen tracking. Alles wat je invult blijft op deze telefoon. De app praat alleen met Intervals.icu, met je eigen sleutel, rechtstreeks vanaf je telefoon. Back-ups maak je zelf.',
-    sources_t: 'Gegevens en lettertypes', sources: 'Trainingen: Intervals.icu (met je eigen sleutel). Lettertypes Poppins en Inter onder de SIL Open Font License. Productwaarden: etiketten en websites van de merken, gecontroleerd op de vermelde datum.',
+    privacy_t: 'Privacy', privacy: 'Geen account, geen reclame, geen tracking. Alles wat je invult blijft op deze telefoon. De app praat alleen met Intervals.icu (met je eigen sleutel) en, als je een gemeente instelt, met Open-Meteo voor het weer – rechtstreeks vanaf je telefoon. Back-ups maak je zelf.',
+    sources_t: 'Gegevens en lettertypes', sources: 'Trainingen: Intervals.icu (met je eigen sleutel). Weersvoorspelling: Open-Meteo.com (CC BY 4.0). Lettertypes Poppins en Inter onder de SIL Open Font License. Productwaarden: etiketten en websites van de merken, gecontroleerd op de vermelde datum.',
     lock_t: 'DynamFuel', lock_l: 'Deze app is nog niet geactiveerd op deze telefoon.'
   };
 
@@ -230,8 +230,8 @@
     upd_new: 'New version available.', upd_done: 'DynamFuel was updated to version {v}.', upd_reload: 'Reload',
 
     about_t: 'About DynamFuel', about_l: 'DynamFuel is a free app by DynamVic Cycling coach. For every planned ride you get a fueling plan based on scientific guidelines. Every number has a source or a rule from your coach.',
-    privacy_t: 'Privacy', privacy: 'No account, no ads, no tracking. Everything you enter stays on this phone. The app only talks to Intervals.icu, with your own key, straight from your phone. You make back-ups yourself.',
-    sources_t: 'Data and fonts', sources: 'Workouts: Intervals.icu (with your own key). Fonts Poppins and Inter under the SIL Open Font License. Product values: labels and brand websites, checked on the date shown.',
+    privacy_t: 'Privacy', privacy: 'No account, no ads, no tracking. Everything you enter stays on this phone. The app only talks to Intervals.icu (with your own key) and, if you set a town, to Open-Meteo for the weather – straight from your phone. You make back-ups yourself.',
+    sources_t: 'Data and fonts', sources: 'Workouts: Intervals.icu (with your own key). Weather forecast: Open-Meteo.com (CC BY 4.0). Fonts Poppins and Inter under the SIL Open Font License. Product values: labels and brand websites, checked on the date shown.',
     lock_t: 'DynamFuel', lock_l: 'This app is not activated on this phone yet.'
   };
 
@@ -365,7 +365,22 @@
     gap_mtc: 'Too much carbohydrate from glucose only ({g} g/h, max {max}): choose products with fructose.', gap_na: '{mg} mg sodium short: take salt or electrolyte tablets.',
     gap_fluid: 'Not enough bottles for {ml} ml: plan a stop to refill.', shop: 'To restock', slot_only_drink: 'drink'
   });
-  Object.assign(rnl, {
+  Object.assign(nl, {
+    set_wx: 'Weersvoorspelling', set_wx_l: 'Typ je gemeente: voor buitenritten in de komende 16 dagen neemt de app de hoogste voorspelde temperatuur tijdens je rit. Alleen de naam van je gemeente gaat naar Open-Meteo, geen GPS.',
+    wx_town: 'Gemeente', wx_search: 'Zoeken', wx_clear: 'Wissen', wx_noplace: 'Geen gemeente gevonden.', wx_err: 'Open-Meteo is niet bereikbaar (offline?).',
+    wx_attr: 'Weergegevens: Open-Meteo.com (CC BY 4.0).', wx_loading: 'Voorspelling ophalen…', wx_fc: 'Voorspelling {place}: {t} °C (hoogste tijdens je rit, Open-Meteo).',
+    wx_own: 'Jouw waarde wordt gebruikt.', wx_none: 'Geen voorspelling beschikbaar: vul zelf in.', wx_set: 'Stel je gemeente in voor de voorspelling',
+    card_share: 'Deel als afbeelding', card_sticker: 'Sticker printen', card_saved: 'Afbeelding bewaard.',
+    card_foot: 'DynamFuel geeft algemene richtlijnen, geen medisch advies. Drink nooit meer dan je zweet.'
+  });
+  Object.assign(en, {
+    set_wx: 'Weather forecast', set_wx_l: 'Type your town: for outdoor rides in the next 16 days the app uses the highest forecast temperature during your ride. Only the name of your town goes to Open-Meteo, no GPS.',
+    wx_town: 'Town', wx_search: 'Search', wx_clear: 'Remove', wx_noplace: 'No town found.', wx_err: 'Open-Meteo cannot be reached (offline?).',
+    wx_attr: 'Weather data: Open-Meteo.com (CC BY 4.0).', wx_loading: 'Getting the forecast…', wx_fc: 'Forecast {place}: {t} °C (highest during your ride, Open-Meteo).',
+    wx_own: 'Your value is used.', wx_none: 'No forecast available: enter it yourself.', wx_set: 'Set your town for the forecast',
+    card_share: 'Share as image', card_sticker: 'Print sticker', card_saved: 'Image saved.',
+    card_foot: 'DynamFuel gives general guidelines, not medical advice. Never drink more than you sweat.'
+  });  Object.assign(rnl, {
     'MATCH-01': 'Hele porties uit je voorraad, binnen {choTolPct} % van je doel, met hoogstens {maxDistinct} soorten producten naast drank (regel van je coach).',
     'MATCH-02': 'Bij gelijke keuze: eerst binnen {closeTolPct} % van het doel, dan zo weinig mogelijk producten, dan je favorieten.',
     'MATCH-03': 'Drank liefst niet sterker dan {maxGperL} g/l (8 %); sterkere drank alleen met water erbij (Sawka 2007).',

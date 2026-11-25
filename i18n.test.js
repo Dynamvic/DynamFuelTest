@@ -21,6 +21,6 @@
 
   test('i18n: comma decimals in all texts (no "0.5"-style numbers)', async () => {
     const I = req('i18n.js');
-    ['nl', 'en'].forEach(l => Object.entries(I[l]).forEach(([k, s]) => { if (typeof s === 'string') assert.ok(!/\d\.\d/.test(s), `${l}.${k}: ${s}`); }));
+    ['nl', 'en'].forEach(l => Object.entries(I[l]).forEach(([k, s]) => { if (typeof s === 'string') assert.ok(!/\d\.\d/.test(s.replace(/CC BY 4\.0/g, '')), `${l}.${k}: ${s}`); /* "CC BY 4.0" is a licence name */ }));
   });
 })();
