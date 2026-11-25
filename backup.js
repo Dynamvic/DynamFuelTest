@@ -74,11 +74,19 @@
     if (r.tempC != null) { if (!numIn(r.tempC, -30, 50)) return null; o.tempC = +r.tempC; }
     if (r.refillMin != null) { if (![0, 60, 90, 120].includes(+r.refillMin)) return null; o.refillMin = +r.refillMin; }
     if (r.next8h != null) { if (typeof r.next8h !== 'boolean') return null; o.next8h = r.next8h; }
+    if (r.planKind != null) { if (!['drinkOnly', 'drinkAndFood', 'withoutDrink'].includes(r.planKind)) return null; o.planKind = r.planKind; }
     if (r.id.startsWith('man-')) {
       if (!isIso(r.date) || !numIn(r.durationS, 600, 12 * 3600) || typeof (r.name ?? '') !== 'string') return null;
       Object.assign(o, { date: r.date, durationS: Math.round(+r.durationS), name: String(r.name || '') });
     }
     return o;
+  }
+
+  /* a stock record: { id, qty 0–999, fav, hidden } for a library product (own products come later in Phase 3) */
+  function checkStock(s) {
+    if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(s.id)) return null;
+    if (!(Number.isInteger(s.qty) && s.qty >= 0 && s.qty <= 999)) return null;
+    return { id: s.id, qty: s.qty, fav: s.fav === true, hidden: s.hidden === true };
   }
 
   function make(data, at) {
@@ -100,7 +108,7 @@
     let fixed = pr.fixed + se.fixed;
     const list = (a, fn) => { if (!Array.isArray(a)) { if (a !== undefined) fixed++; return []; } const out = a.map(fn).filter(Boolean); fixed += a.length - out.length; return out; };
     const rides = list(x.rides, checkRide);
-    const items = list(x.items, it => it && typeof it === 'object' && typeof it.id === 'string' ? it : null);   // own items + stock: checked in Phase 3
+    const items = list(x.items, checkStock);
     const plans = list(x.plans, p => p && typeof p === 'object' && typeof p.id === 'string' ? p : null);
     const logs = list(x.logs, l => l && typeof l === 'object' ? l : null);
     const icu = x.icu && typeof x.icu.key === 'string' && x.icu.key.trim() ? { key: x.icu.key.trim(), athleteId: String(x.icu.athleteId || '').trim() } : null;
@@ -108,5 +116,5 @@
       data: { settings: se.s, profile: pr.p, athlete: checkAthlete(x.athlete), rides, items, plans, logs, icu } };
   }
 
-  return { SCHEMA, EU14, HEALTH, MIGRATIONS, defaultProfile, defaultSettings, checkProfile, checkSettings, checkAthlete, checkRide, make, check, isHHMM, isIso };
+  return { SCHEMA, EU14, HEALTH, MIGRATIONS, defaultProfile, defaultSettings, checkProfile, checkSettings, checkAthlete, checkRide, checkStock, make, check, isHHMM, isIso };
 });

@@ -96,7 +96,6 @@
     post_normal: 'Maaltijd met koolhydraten en {p1}–{p2} g eiwit binnen {h} u', post_water: 'Water drinken; extra herstelvoeding is niet nodig.',
     post_rehyd: 'Drink 1,25–1,5 l per kg die je verloor (weeg je voor en na).', post_rehyd_ml: 'Drink {a}–{b} ml extra om je vochttekort aan te vullen.',
     energy: '± {kj} kJ arbeid ≈ {k1}–{k2} kcal verbruik (ter info; je eet volgens wat je darmen opnemen, niet om alles terug te winnen).',
-    pack_later: 'Je paklijst met je eigen producten (gels, repen, drank) komt in de volgende versie.',
     w_nomass: 'Vul je gewicht in je profiel in.', w_heat: 'Neem koele drank mee (onder {c} °C) (McCubbin 2020).',
     w_sweat_once: 'Tip: meet één keer je zweetverlies in gelijkaardige omstandigheden. Dan wordt je vochtadvies persoonlijk.', w_sweat_ok: 'Begrepen',
     w_parse: 'Deze training kon niet gelezen worden.',
@@ -210,7 +209,6 @@
     post_normal: 'Meal with carbohydrate and {p1}–{p2} g protein within {h} h', post_water: 'Drink water; no extra recovery food is needed.',
     post_rehyd: 'Drink 1,25–1,5 l for every kg you lost (weigh yourself before and after).', post_rehyd_ml: 'Drink {a}–{b} ml extra to make up your fluid deficit.',
     energy: '± {kj} kJ of work ≈ {k1}–{k2} kcal used (for information; you eat what your gut absorbs, not to replace everything).',
-    pack_later: 'Your pack list with your own products (gels, bars, drink) comes in the next version.',
     w_nomass: 'Enter your body mass in your profile.', w_heat: 'Take cool drinks (below {c} °C) (McCubbin 2020).',
     w_sweat_once: 'Tip: measure your sweat loss once in similar conditions. Your fluid advice then becomes personal.', w_sweat_ok: 'Got it',
     w_parse: 'This workout could not be read.',
@@ -332,7 +330,55 @@
     'MAN-01': 'Endurance ride without blocks: the app assumes a steady intensity in zone 2 (your coach\'s rule).', 'MAN-02': 'Recovery ride without blocks: the app assumes zone 1 (proposal, your coach still has to confirm).', 'MAN-03': 'Key session or race without blocks: the intensity is not known; the app uses zone 4 for now (to confirm).',
     'METH-IF': 'Intensity (IF) calculated from the planned blocks.', 'GOAL-01': 'Without a tag the app suggests a type of ride.', 'AGE-01': 'Only your birth year is known: if you turn 18 in the ride year, you still count as under 18 (safe side).'
   };
-  Object.keys(rnl).forEach(k => { nl['r_' + k] = rnl[k]; });
+  /* Phase 3: stock and pack list */
+  Object.assign(nl, {
+    tab_stock: 'Voorraad', stock_t: 'Voorraad', stock_l: 'Duid aan wat je in huis hebt en hoeveel. De app kiest alleen uit wat op voorraad is.',
+    stock_all: 'Alles', stock_in: 'Op voorraad', stock_hide: 'Verbergen', stock_unhide: 'Terugzetten', stock_hidden: 'Verborgen producten ({n})',
+    stock_fav: 'Favoriet', stock_caf: 'met cafeïne – nog niet in de paklijst', stock_none: 'Nog niets op voorraad.', stock_less: 'Eén minder', stock_more: 'Eén meer',
+    cat_gel: 'Gels', cat_chew: 'Chews', cat_bar: 'Repen', cat_drink: 'Sportdrank', cat_el: 'Elektrolyten', cat_food: 'Gewoon eten',
+    u_gel: 'gels', u_bar: 'repen', u_chew: 'porties', u_drink: 'dosissen', u_electrolyte: 'tabletten', u_food: 'porties',
+    serv_drink: 'per dosis: {g} g poeder in {ml} ml water', serv_tab: 'per tablet in {ml} ml water', gf: 'glucose + fructose',
+    excl_allergen: 'Niet gebruikt: bevat een allergeen uit je profiel.', excl_traces: 'Niet gebruikt: kan sporen bevatten van een allergeen uit je profiel.',
+    excl_allergens_unknown: 'Niet gebruikt: de allergenen zijn niet volledig gekend.',
+    sec_pack: 'Paklijst', pack_nostock: 'Duid je voorraad aan, dan stelt de app je paklijst samen.', plan_choose: 'Kies je plan',
+    plan_drinkOnly: 'Alleen drank', plan_drinkAndFood: 'Drank + gels/eten', plan_withoutDrink: 'Zonder sportdrank',
+    pack_drink: '{n}× bidon {name}: {d} dosis per bidon van {ml} ml', pack_powder: '{g} g poeder', pack_tab: '{n}× bidon water met {k} tablet {name}',
+    pack_water: '{n}× bidon water ({ml} ml)', pack_refill: 'Onderweg bij te vullen: {n} bidons (neem het poeder mee).', pack_refill_water: 'Onderweg bij te vullen: {n} bidons.', pack_total: 'Samen: {c} g{H} koolhydraten · {na} mg{H} natrium',
+    pack_strong: 'Sterke drank ({g} g/l): drink er water bij.', gap_cho_short: 'Je voorraad is te klein: nog {g} g koolhydraten nodig.', gap_cho_over: 'Met hele porties kom je {g} g boven je doel.',
+    gap_mtc: 'Te veel koolhydraten uit alleen glucose ({g} g/u, max {max}): kies producten met fructose.', gap_na: 'Nog {mg} mg natrium te weinig: neem zout of elektrolyttabletten.',
+    gap_fluid: 'Te weinig bidons voor {ml} ml: plan een stop om bij te vullen.', shop: 'Om aan te vullen', slot_only_drink: 'drinken'
+  });
+  Object.assign(en, {
+    tab_stock: 'Stock', stock_t: 'Stock', stock_l: 'Mark what you have at home and how much. The app only chooses from what is in stock.',
+    stock_all: 'All', stock_in: 'In stock', stock_hide: 'Hide', stock_unhide: 'Show again', stock_hidden: 'Hidden products ({n})',
+    stock_fav: 'Favourite', stock_caf: 'with caffeine – not in the pack list yet', stock_none: 'Nothing in stock yet.', stock_less: 'One less', stock_more: 'One more',
+    cat_gel: 'Gels', cat_chew: 'Chews', cat_bar: 'Bars', cat_drink: 'Sports drink', cat_el: 'Electrolytes', cat_food: 'Real food',
+    u_gel: 'gels', u_bar: 'bars', u_chew: 'servings', u_drink: 'doses', u_electrolyte: 'tablets', u_food: 'servings',
+    serv_drink: 'per dose: {g} g powder in {ml} ml water', serv_tab: 'per tablet in {ml} ml water', gf: 'glucose + fructose',
+    excl_allergen: 'Not used: contains an allergen from your profile.', excl_traces: 'Not used: may contain traces of an allergen from your profile.',
+    excl_allergens_unknown: 'Not used: the allergens are not fully known.',
+    sec_pack: 'Pack list', pack_nostock: 'Mark your stock and the app builds your pack list.', plan_choose: 'Choose your plan',
+    plan_drinkOnly: 'Drink only', plan_drinkAndFood: 'Drink + gels/food', plan_withoutDrink: 'Without sports drink',
+    pack_drink: '{n}× bottle {name}: {d} dose per {ml} ml bottle', pack_powder: '{g} g powder', pack_tab: '{n}× bottle of water with {k} tablet {name}',
+    pack_water: '{n}× bottle of water ({ml} ml)', pack_refill: 'To refill on the way: {n} bottles (take the powder with you).', pack_refill_water: 'To refill on the way: {n} bottles.', pack_total: 'Together: {c} g{H} carbohydrate · {na} mg{H} sodium',
+    pack_strong: 'Strong drink ({g} g/l): drink water with it.', gap_cho_short: 'Your stock is too small: {g} g carbohydrate still needed.', gap_cho_over: 'With whole servings you end {g} g above your target.',
+    gap_mtc: 'Too much carbohydrate from glucose only ({g} g/h, max {max}): choose products with fructose.', gap_na: '{mg} mg sodium short: take salt or electrolyte tablets.',
+    gap_fluid: 'Not enough bottles for {ml} ml: plan a stop to refill.', shop: 'To restock', slot_only_drink: 'drink'
+  });
+  Object.assign(rnl, {
+    'MATCH-01': 'Hele porties uit je voorraad, binnen {choTolPct} % van je doel, met hoogstens {maxDistinct} soorten producten naast drank (regel van je coach).',
+    'MATCH-02': 'Bij gelijke keuze: eerst binnen {closeTolPct} % van het doel, dan zo weinig mogelijk producten, dan je favorieten.',
+    'MATCH-03': 'Drank liefst niet sterker dan {maxGperL} g/l (8 %); sterkere drank alleen met water erbij (Sawka 2007).',
+    'MATCH-04': 'Jij kiest: alleen drank, drank met gels/eten, of zonder sportdrank (regel van je coach).',
+    'MATCH-05': 'Hoogstens de helft van je bidons met sterke drank; de rest water (regel van je coach).'
+  });
+  Object.assign(ren, {
+    'MATCH-01': 'Whole servings from your stock, within {choTolPct} % of your target, with at most {maxDistinct} kinds of products besides drink (your coach\'s rule).',
+    'MATCH-02': 'When choices are equal: first within {closeTolPct} % of the target, then as few products as possible, then your favourites.',
+    'MATCH-03': 'Drink preferably not stronger than {maxGperL} g/l (8 %); stronger drink only with water (Sawka 2007).',
+    'MATCH-04': 'You choose: drink only, drink with gels/food, or without sports drink (your coach\'s rule).',
+    'MATCH-05': 'At most half of your bottles with strong drink; the rest water (your coach\'s rule).'
+  });  Object.keys(rnl).forEach(k => { nl['r_' + k] = rnl[k]; });
   Object.keys(ren).forEach(k => { en['r_' + k] = ren[k]; });
   return { nl, en };
 });

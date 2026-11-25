@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.2.3';
+const APP_VERSION = '0.3.0';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -28,6 +28,7 @@ let META = store.get('meta', {}) || {};
 const DATA = { rules: null, library: null, err: false };
 let EVENTS = [];               // Intervals.icu events (cache in IndexedDB)
 const RIDES = new Map();       // athlete choices per ride + rides added by hand (IndexedDB 'rides')
+const STOCK = new Map();       // per product: { id, qty, fav, hidden } (IndexedDB 'items')
 const UI = { wz: null, wzErr: '', err: {}, fetching: false, fetchErr: '', icuMsg: '', icuBad: false, add: null, restore: null };
 const saveSet = () => store.set('settings', SET);
 const saveP = () => store.set('profile', P);
@@ -317,13 +318,15 @@ function vRide(id) {
   /* during */
   const c = T.cho, fl = T.fluid, na = T.sodium, bottleMl = P.bottleMl;
   const nBottles = bottleMl && fl.totalMl ? Math.ceil(fl.totalMl / bottleMl - 1e-9) : 0;
+  const needRefill = !ctx.indoor && P.cages != null && nBottles > P.cages;
+  const M = DFMatch.match({ targets: T, items: libItems(), stock: stockList(), profile: P, rules: R,
+    ctx: Object.assign({}, ctx, { refillMin: needRefill ? (C.refillMin || 0) : 0, planKind: C.planKind }) });
   const notes = [];
   if (c.gph === 0 && !c.optional) notes.push(t('cho_zero'));
   if (c.optional) notes.push(t('cho_opt', { lo: c.lo, hi: c.hi }));
   if (c.mtcRequired) notes.push(t('cho_mtc', { max: R.rules['CHO-MTC-01'].glucoseOnlyMaxGph }));
   if (c.gutAdvice) notes.push(t('cho_gut', { guide: c.guideline, tol: ns(P.gutCapGph) }));
   if (T.warnings.includes('notolerance')) notes.push(`${t('cho_notol')} <a href="#profile">${t('tab_profile')}</a>`);
-  if (nBottles) notes.push(t('bottles_n', { n: nBottles, ml: bottleMl }) + (!ctx.indoor && P.cages != null && nBottles > P.cages ? ` – ${t('bottles_refill', { c: P.cages })}` : ''));
   if (T.warnings.includes('heat_cool_drinks')) notes.push(t('w_heat', { c: R.rules['HEAT-01'].coolC }));
   if (r.carbsPerHour) notes.push(t('ride_carbs_icu', { g: ns(r.carbsPerHour) }));
   h += `<section class="card"><h2>${t('sec_during')}</h2><div class="big3">
@@ -332,13 +335,16 @@ function vRide(id) {
     <div class="tile"><span class="k">${t('sodium')}</span><span class="v">${na.none ? '–' : na.mgph}<small>${na.none ? '' : ' mg' + hpart}</small></span><span class="s">${na.none ? t('na_none') : t('na_perl', { mg: na.mgPerL })}</span>${statusPill(na.status)}</div></div>
     ${c.gph ? `<p class="small muted">${t('total_g', { g: c.totalG })}</p>` : ''}
     ${notes.length ? `<ul class="plain small">${notes.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-    <div class="fld"><span class="lbl">${t('caffeine_t')} ${T.caffeine.on || T.caffeine.optional ? statusPill(T.caffeine.status) : ''}</span>${cafText(T.caffeine)}</div>
-    <p class="small muted">${t('pack_later')}</p></section>`;
+    <div class="fld"><span class="lbl">${t('caffeine_t')} ${T.caffeine.on || T.caffeine.optional ? statusPill(T.caffeine.status) : ''}</span>${cafText(T.caffeine)}</div></section>`;
+  h += packCard(M, T, ctx, C, needRefill);
 
-  /* timing */
-  const every = R.rules['TIME-02'].everyMin, drinkMl = F.roundTo(fl.mlph * every / 60, R.rules['RND-01'].fluidMl);
-  h += `<section class="card"><h2>${t('sec_timing')} ${statusPill(manSt)}</h2>${T.slots.length ? `<div class="slots">${T.slots.map(s => `<div class="slotr"><b>${X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min })}</b>
-    <span>${s.sustained ? t('slot_sustained') : s.easy ? t('slot_food') : t('slot_gel')}${drinkMl ? ` · ${t('slot_drink', { ml: drinkMl })}` : ''}</span></div>`).join('')}</div>` : `<p class="muted">${t('slot_none')}</p>`}</section>`;
+  /* timing: with stock, the products per moment (matcher schedule); without, what kind of intake fits */
+  const every = R.rules['TIME-02'].everyMin, drinkMl = F.roundTo(fl.mlph * every / 60, R.rules['RND-01'].fluidMl), withStock = stockList().length > 0;
+  h += `<section class="card"><h2>${t('sec_timing')} ${statusPill(manSt)}</h2>${T.slots.length ? `<div class="slots">${T.slots.map((s, i) => {
+    const sc = M.schedule[i] || { eat: [], drinkMl }, eat = sc.eat.map(e => esc(itemName(e.id))).join(' + ');
+    const kind = s.sustained ? t('slot_sustained') : s.easy ? t('slot_food') : t('slot_gel');
+    const parts = [withStock && T.cho.gph > 0 ? (eat ? `<b>${eat}</b>` : '') : kind, sc.drinkMl ? t('slot_drink', { ml: sc.drinkMl }) : ''].filter(Boolean);
+    return `<div class="slotr"><b>${X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min })}</b><span>${parts.join(' · ')}${withStock && eat && s.sustained ? `<br><small class="muted">${t('slot_sustained')}</small>` : ''}</span></div>`; }).join('')}</div>` : `<p class="muted">${t('slot_none')}</p>`}</section>`;
 
   /* before / after / energy */
   h += `<section class="card"><h2>${t('sec_before')}</h2>${preText(T.pre)}</section>`;
@@ -347,7 +353,7 @@ function vRide(id) {
 
   /* why */
   const ids = [];
-  [c.rules, fl.rules, na.rules, T.caffeine.rules, T.pre.rules, T.post.rules, ...T.slots.map(s => s.rules), T.energy.rules, T.intensity.rules, doc.manualRule ? [doc.manualRule] : []].forEach(l => (l || []).forEach(x => { if (!ids.includes(x)) ids.push(x); }));
+  [c.rules, fl.rules, na.rules, T.caffeine.rules, T.pre.rules, T.post.rules, ...T.slots.map(s => s.rules), T.energy.rules, T.intensity.rules, doc.manualRule ? [doc.manualRule] : [], stockList().length ? ['MATCH-01', 'MATCH-02', 'MATCH-03', 'MATCH-04', 'MATCH-05'] : []].forEach(l => (l || []).forEach(x => { if (!ids.includes(x)) ids.push(x); }));
   h += `<details class="card"><summary>${t('sec_why')}</summary><p class="small muted">${t('why_rules')}</p><div class="why">${ids.map(id => {
     const ru = R.rules[id] || {}; return `<div class="r${ru.status === 'open' ? ' open' : ''}"><span>${esc(ruleText(id))}</span><span><code>${id}</code> ${ru.status === 'open' ? `<span class="pill open">${t('open_badge')}</span>` : ru.status === 'coach' ? `<span class="pill coach">${t('coach_badge')}</span>` : ''}</span></div>`; }).join('')}</div>
     <p class="small"><a href="#about">${t('ref_t')}</a></p></details>`;
@@ -380,6 +386,84 @@ function postText(p) {
   else lines.push(p.proteinG ? t('post_normal', { p1: p.proteinG[0], p2: p.proteinG[1], h: p.withinH }) : t('w_nomass'));
   lines.push(p.rehydrateMl ? t('post_rehyd_ml', { a: p.rehydrateMl[0], b: p.rehydrateMl[1] }) : t('post_rehyd'));
   return `<ul class="plain">${lines.map(x => `<li>${x}</li>`).join('')}</ul>`;
+}
+
+/* ---------- stock (library + what the athlete has) ---------- */
+const CATS = [['gel', 'cat_gel'], ['chew', 'cat_chew'], ['bar', 'cat_bar'], ['drink', 'cat_drink'], ['electrolyte', 'cat_el'], ['food', 'cat_food']];
+const libItems = () => DATA.library ? DATA.library.items : [];
+const itemById = id => libItems().find(x => x.id === id);
+const itemName = id => { const it = itemById(id); return it ? `${it.brand} ${it.name}` : id; };
+const stockList = () => [...STOCK.values()].filter(s => s.qty > 0 && !s.hidden && itemById(s.id)).map(s => ({ id: s.id, qty: s.qty, fav: !!s.fav }));
+function servingText(it) {
+  if (it.category === 'drink' && it.waterMl) return t('serv_drink', { g: ns(it.powderG ?? '?'), ml: it.waterMl });
+  if (it.category === 'electrolyte' && it.waterMl) return t('serv_tab', { ml: it.waterMl });
+  const s = it.serving || {}; return [s.amount != null ? `${ns(s.amount)} ${s.unit || ''}`.trim() : '', s.format || ''].filter(Boolean).join(' · ');
+}
+function itemRow(it) {
+  const s = STOCK.get(it.id) || { qty: 0 }, a = DFMatch.allowed(it, P), H = lang() === 'en' ? '' : '';
+  const facts = [it.choG != null ? `${ns(it.choG)} g ${t('cho').toLowerCase()}` : null, it.sodiumMg != null ? `${ns(it.sodiumMg)} mg ${t('sodium').toLowerCase()}` : null].filter(Boolean).join(' · ');
+  return `<div class="card item${s.qty > 0 ? ' instock' : ''}"><div class="row between nowrap"><div class="grow"><b>${esc(it.brand)} ${esc(it.name)}</b>
+      <div class="meta"><span>${facts}</span><span>${esc(servingText(it))}</span>${it.mtc ? `<span class="pill coach">${t('gf')}</span>` : ''}${it.caffeineMg > 0 ? `<span class="pill open">${t('stock_caf')}</span>` : ''}</div></div>
+      <button class="iconbtn star" data-act="sfav" data-id="${esc(it.id)}" aria-pressed="${!!s.fav}" aria-label="${t('stock_fav')}">${s.fav ? '★' : '☆'}</button></div>
+    ${!a.ok ? `<p class="small err">${t('excl_' + a.why)}</p>` : ''}
+    <div class="row between"><div class="row stepper"><button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="-1" aria-label="${t('stock_less')}"${s.qty > 0 ? '' : ' disabled'}>−</button>
+      <input type="text" inputmode="numeric" class="qty" data-sqid="${esc(it.id)}" value="${s.qty || 0}" aria-label="${esc(it.brand + ' ' + it.name)}">
+      <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}">+</button><span class="muted small">${t('u_' + it.category)}</span></div>
+      <button class="linkbtn" data-act="shide" data-id="${esc(it.id)}">${s.hidden ? t('stock_unhide') : t('stock_hide')}</button></div></div>`;
+}
+function vStock() {
+  const f = UI.stockFilter || 'all', items = libItems();
+  const st = id => STOCK.get(id) || {};
+  let h = topbar(t('stock_t')) + `<p class="small muted">${t('stock_l')}</p>` + chips('stockFilter', [['all', t('stock_all')], ['in', t('stock_in')]], f, 's', 'sfilter');
+  let any = false;
+  CATS.forEach(([cat, key]) => {
+    const list = items.filter(it => it.category === cat && !st(it.id).hidden && (f === 'all' || st(it.id).qty > 0));
+    if (!list.length) return; any = true;
+    h += `<h2 class="dayh">${t(key)}</h2>` + list.map(itemRow).join('');
+  });
+  if (!any) h += `<p class="muted">${t('stock_none')}</p>`;
+  const hid = items.filter(it => st(it.id).hidden);
+  if (hid.length) h += `<details class="card"><summary>${t('stock_hidden', { n: hid.length })}</summary>${hid.map(itemRow).join('')}</details>`;
+  return h;
+}
+async function saveStock(id, patch) {
+  const s = Object.assign({ id, qty: 0, fav: false, hidden: false }, STOCK.get(id) || {}, patch);
+  s.qty = Math.max(0, Math.min(999, Math.round(+s.qty || 0)));
+  STOCK.set(id, s); await DB.put('items', s);
+}
+
+/* pack list for one ride (matcher, MATCH-01..05) */
+function packCard(M, T, ctx, C, needRefill) {
+  const H = lang() === 'en' ? '/h' : '/u', R = DATA.rules.rules, hasStock = stockList().length > 0;
+  let h = `<section class="card"><h2>${t('sec_pack')}</h2>`;
+  if (!hasStock && T.cho.gph > 0) h += `<p>${t('pack_nostock')} <a href="#stock">${t('tab_stock')}</a></p>`;
+  if (M.alternatives.length > 1) h += `<div class="fld"><span class="lbl">${t('plan_choose')}</span><div class="chips" role="group">${M.alternatives.map(a =>
+    `<button type="button" class="chip" data-act="rset" data-f="planKind" data-v="${a.kind}" data-t="s" aria-pressed="${a.chosen}">${t('plan_' + a.kind)} · ${a.choGph} g${H}</button>`).join('')}</div></div>`;
+  if (needRefill) h += `<div class="fld"><span class="lbl">${t('ride_refill')}</span>${chips('refillMin', [[0, t('refill_0')], [60, t('refill_n', { n: 60 })], [90, t('refill_n', { n: 90 })], [120, t('refill_n', { n: 120 })]], C.refillMin || 0, 'n', 'rset')}</div>`;
+  const li = M.pack.map(p => {
+    if (p.refill) return t(M.bottles.some(b => b.content === 'drink') ? 'pack_refill' : 'pack_refill_water', { n: p.bottles });
+    if (!p.bottle) return `${p.n}× ${esc(itemName(p.id))}`;
+    if (p.content === 'drink') return t('pack_drink', { n: p.bottles, name: esc(itemName(p.id)), d: ns(p.doses), ml: M.bottleMl }) + (p.powderG ? ` (${t('pack_powder', { g: ns(p.powderG) })})` : '');
+    if (p.content === 'electrolyte') return t('pack_tab', { n: p.bottles, k: p.tabs, name: esc(itemName(p.id)) });
+    return t('pack_water', { n: p.bottles, ml: M.bottleMl });
+  });
+  if (li.length) h += `<ul class="plain">${li.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  if (hasStock && T.cho.gph > 0) h += `<p class="small muted">${t('pack_total', { c: M.totals.choGph, na: M.totals.naMgph, H })}</p>`;
+  const strong = M.bottles.find(b => b.veryConcentrated);
+  const warn = [];
+  if (strong) warn.push(t('pack_strong', { g: strong.gPerL }));
+  M.gaps.forEach(g => {
+    if (g.what === 'cho' && hasStock) { if (g.shortG > 0) warn.push(t('gap_cho_short', { g: g.shortG })); if (g.overG > 0) warn.push(t('gap_cho_over', { g: g.overG })); }
+    if (g.what === 'mtc') warn.push(t('gap_mtc', { g: g.glucoseOnlyGph, max: g.max }));
+    if (g.what === 'sodium' && hasStock) warn.push(t('gap_na', { mg: g.shortMg }));
+    if (g.what === 'fluid') warn.push(t('gap_fluid', { ml: g.shortMl }));
+  });
+  if (warn.length) h += `<ul class="plain small warnlist">${warn.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  const shop = (M.shopping || []).filter(s => s.for !== 'cho' || hasStock);
+  if (shop.length) h += `<details class="inl"><summary>${t('shop')}</summary><ul class="plain small">${shop.map(s => s.items.map(i => `<li>${esc(itemName(i.id))}${i.n ? ` (${i.n}×)` : ''}</li>`).join('')).join('')}</ul></details>`;
+  const ex = M.notes.filter(n => n.key === 'excluded');
+  if (ex.length) h += `<ul class="plain small muted">${ex.map(n => `<li>${esc(itemName(n.p.id))}: ${t('excl_' + n.p.why)}</li>`).join('')}</ul>`;
+  return h + '</section>';
 }
 
 /* ---------- profile, settings, about ---------- */
@@ -421,7 +505,7 @@ function vAbout() {
 }
 
 /* ---------- router ---------- */
-const VIEWS = { welcome: vWizard, rides: vRides, ride: vRide, add: vAdd, profile: vProfile, settings: vSettings, about: vAbout };
+const VIEWS = { welcome: vWizard, rides: vRides, ride: vRide, add: vAdd, stock: vStock, profile: vProfile, settings: vSettings, about: vAbout };
 function route() {
   const v = $('#view'), tabs = $('nav.tabs');
   document.documentElement.lang = lang();
@@ -433,7 +517,7 @@ function route() {
   else if (h === 'welcome') h = 'rides';
   v.innerHTML = (VIEWS[h] || vRides)(arg);
   tabs.hidden = !SET.onboarded; v.classList.toggle('notabs', !SET.onboarded);
-  const tab = h === 'ride' || h === 'add' ? 'rides' : h;
+  const tab = h === 'ride' || h === 'add' ? 'rides' : h;   // stock has its own tab
   document.querySelectorAll('nav.tabs a').forEach(a => a.toggleAttribute('aria-current', a.dataset.tab === tab));
   document.querySelectorAll('nav.tabs [data-l]').forEach(s => { s.textContent = t(s.dataset.l); });
 }
@@ -462,7 +546,7 @@ function showUpdateBanner() {
 
 /* ---------- back-up and restore ---------- */
 async function doBackup(withKey) {
-  const data = BK.make({ settings: SET, profile: P, athlete: ATH, rides: [...RIDES.values()], items: await DB.all('items'), plans: await DB.all('plans'), logs: await DB.all('logs'), icu: withKey ? ICU : null }, todayIso());
+  const data = BK.make({ settings: SET, profile: P, athlete: ATH, rides: [...RIDES.values()], items: [...STOCK.values()], plans: await DB.all('plans'), logs: await DB.all('logs'), icu: withKey ? ICU : null }, todayIso());
   const name = `dynamfuel-backup-${todayIso()}.json`, blob = new Blob([JSON.stringify(data)], { type: 'application/json' }), m = $('#bmsg');
   try {
     const file = new File([blob], name, { type: 'application/json' });
@@ -486,7 +570,7 @@ async function doRestore() {
   if (d.icu) ICU = d.icu;                                                // a back-up without key keeps the key already on this phone
   saveSet(); saveP(); saveIcu(); store.set('athlete', ATH);
   await DB.replace('rides', d.rides); await DB.replace('items', d.items); await DB.replace('plans', d.plans); await DB.replace('logs', d.logs);
-  RIDES.clear(); d.rides.forEach(x => RIDES.set(x.id, x));
+  RIDES.clear(); d.rides.forEach(x => RIDES.set(x.id, x)); STOCK.clear(); d.items.forEach(x => STOCK.set(x.id, x));
   UI.restore = null; UI.wz = null; closeSheet(); location.hash = '#rides'; route();
   toast(r.fixed ? (r.fixed === 1 ? t('rs_fixed_1') : t('rs_fixed', { n: r.fixed })) : t('rs_done'));
 }
@@ -528,6 +612,7 @@ document.addEventListener('change', async ev => {
   if (el.dataset.icu) { ICU[el.dataset.icu] = el.value.trim(); saveIcu(); if (!UI.wz) toast(t('icu_saved_key')); return; }
   if (el.dataset.set) { SET[el.dataset.set] = BK.isHHMM(el.value) ? el.value : null; saveSet(); toast(t('saved')); return; }
   if (el.dataset.add) { UI.add[el.dataset.add] = el.value; return; }
+  if (el.dataset.sqid) { const n = parseInt(el.value, 10); await saveStock(el.dataset.sqid, { qty: isFinite(n) ? n : 0 }); return rerender(); }
   if (el.dataset.rf) {
     const id = rideIdFromHash(), f = el.dataset.rf; if (!id) return;
     if (f === 'start') await saveRideChoice(id, 'start', BK.isHHMM(el.value) ? el.value : null);
@@ -576,6 +661,10 @@ document.addEventListener('click', async ev => {
     if (!rec || A.date < todayIso()) { UI.addErr = t('add_err'); return rerender(); }
     RIDES.set(rec.id, rec); await DB.put('rides', rec); UI.add = null; location.hash = '#ride/' + encodeURIComponent(rec.id); return;
   }
+  if (a === 'sqty') { const s = STOCK.get(el.dataset.id) || { qty: 0 }; await saveStock(el.dataset.id, { qty: (s.qty || 0) + (+el.dataset.d) }); return rerender(); }
+  if (a === 'sfav') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { fav: !s.fav }); return rerender(); }
+  if (a === 'shide') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { hidden: !s.hidden }); return rerender(); }
+  if (a === 'sfilter') { UI.stockFilter = el.dataset.v; return rerender(); }
   if (a === 'bk' || a === 'bkkey') return doBackup(a === 'bkkey');
   if (a === 'rsgo') return doRestore();
   if (a === 'erase') return sheet(`<h2>${t('erase_sure')}</h2><p>${t('erase_l')}</p><button class="btn danger big wide" data-act="erasego">${t('erase_go')}</button>`);
@@ -607,7 +696,7 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
     const [r, l] = await Promise.all([fetch('data/rules.json').then(x => x.json()), fetch('data/library.json').then(x => x.json())]);
     DATA.rules = r; DATA.library = l;
   } catch (e) { DATA.err = true; }
-  try { EVENTS = await DB.all('events'); (await DB.all('rides')).forEach(x => RIDES.set(x.id, x)); } catch (e) { }
+  try { EVENTS = await DB.all('events'); (await DB.all('rides')).forEach(x => RIDES.set(x.id, x)); (await DB.all('items')).forEach(x => STOCK.set(x.id, x)); } catch (e) { }
   route();
   // tell the athlete once that a new version is running (the banner only shows when the update arrives while the app is open)
   const seen = store.get('seenVersion', null);

@@ -130,6 +130,9 @@
 
     // case 07 review E3: show the drink + food plan first when it fits ± 10 % (and the glucose-only limit)
     if (bestMix && bestMix.within && bestMix.mtcOk) best = bestMix;
+    // MATCH-04: the athlete picked one of the plans (ctx.planKind); a kind that has no plan with this stock keeps the default
+    const picked = { drinkOnly: bestDrink, drinkAndFood: bestMix, withoutDrink: bestSolid }[ctx.planKind];
+    if (picked) best = picked;
 
     /* ---- sodium: fill the other bottles with electrolyte tabs until the lower bound is met ---- */
     const bottles = [];
