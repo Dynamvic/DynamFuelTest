@@ -30,6 +30,37 @@
     assert.equal(U.timingRows(slots, null, 200, () => true).length, 4, 'without stock every moment shows what kind of intake fits');
   });
 
+  test('ui: search in the stock – every word in brand + name, case and accents ignored (UX #17)', async () => {
+    const U = req('ui.js'), L = [{ id: 'a', brand: '6D', name: 'Sports Gel', category: 'gel' }, { id: 'b', brand: 'Nduranz', name: 'Nrgy Gel 45', category: 'gel' }, { id: 'c', brand: '', name: 'Café crème', category: 'food' }];
+    assert.deepEqual(U.filterStock(L, {}, { q: 'gel' }).map(x => x.id), ['a', 'b']);
+    assert.deepEqual(U.filterStock(L, {}, { q: 'NDURANZ 45' }).map(x => x.id), ['b']);
+    assert.deepEqual(U.filterStock(L, {}, { q: 'cafe' }).map(x => x.id), ['c'], 'é matches e');
+    assert.deepEqual(U.filterStock(L, {}, { q: '6d nrgy' }).map(x => x.id), [], 'all words must match one product');
+    assert.deepEqual(U.filterStock(L, {}, { q: '  ' }).map(x => x.id), ['a', 'b', 'c']);
+  });
+
+  test('ui: a pack list taken off the stock – stock units, never below 0, water/refill take nothing (UX #19)', async () => {
+    const U = req('ui.js');
+    const pack = [{ id: 'gel', n: 6 }, { id: 'bar', n: 1 }, { bottle: true, content: 'drink', id: 'mix', bottles: 2, doses: 1.5 },
+      { bottle: true, content: 'electrolyte', id: 'tab', bottles: 1, tabs: 1 }, { bottle: true, content: 'water', id: null, bottles: 1 }, { refill: true, bottles: 1 }];
+    const qty = { gel: 8, bar: 0, mix: 10, tab: 1, other: 5 };
+    assert.deepEqual(U.usePack(pack, qty), [{ id: 'gel', from: 8, to: 2 }, { id: 'mix', from: 10, to: 7 }, { id: 'tab', from: 1, to: 0 }],
+      '2 bottles × 1,5 doses = 3 doses; bar not in stock is skipped');
+    assert.deepEqual(U.usePack([{ id: 'gel', n: 9 }], { gel: 4 }), [{ id: 'gel', from: 4, to: 0 }]);
+    assert.deepEqual(U.usePack([], qty), []);
+  });
+
+  test('ui: the ride whose pack was taken off still plans with that stock; other rides see the lower stock', async () => {
+    const U = req('ui.js'), raw = [{ id: 'gel', qty: 2, fav: true }, { id: 'tab', qty: 0 }, { id: 'old', qty: 3 }, { id: 'hid', qty: 4, hidden: true }];
+    const used = { at: '2026-11-25', items: [{ id: 'gel', from: 8, to: 2 }, { id: 'tab', from: 1, to: 0 }] }, ok = id => id !== 'old';
+    assert.deepEqual(U.stockForRide(raw, used, ok), [{ id: 'gel', qty: 8, fav: true }, { id: 'tab', qty: 1, fav: false }]);
+    assert.deepEqual(U.stockForRide(raw, null, ok), [{ id: 'gel', qty: 2, fav: true }], 'no "used": the stock as it is (= stockList)');
+    const B = req('backup.js');
+    assert.deepEqual(B.checkRide({ id: 'icu-1', used }).used, used, 'kept in the ride record and in back-ups');
+    assert.equal(B.checkRide({ id: 'icu-1', used: { at: '2026-11-25', items: [{ id: 'gel', from: 1, to: 3 }] } }), null, 'to above from is refused');
+    assert.equal(B.checkRide({ id: 'icu-1', used: { at: 'today', items: [] } }), null);
+  });
+
   test('ui: range shown only when low and high differ; wizard defaults fill only empty values', async () => {
     const U = req('ui.js');
     assert.ok(U.isRange(30, 60)); assert.ok(!U.isRange(60, 60)); assert.ok(!U.isRange(null, 60));
