@@ -55,6 +55,7 @@
     out.lang = ['nl', 'en'].includes(s.lang) ? s.lang : (s.lang !== undefined && fixed++, d.lang);
     out.usualStart = s.usualStart == null ? null : isHHMM(s.usualStart) ? s.usualStart : (fixed++, null);
     out.onboarded = typeof s.onboarded === 'boolean' ? s.onboarded : d.onboarded;
+    if (s.icuWrite != null) { if (typeof s.icuWrite === 'boolean') out.icuWrite = s.icuWrite; else fixed++; }   // Phase 4: off unless switched on
     // town for the forecast (P3-4): name + rounded coordinates only
     const L = s.location;
     if (L != null) {
@@ -80,6 +81,10 @@
     if (r.tempC != null) { if (!numIn(r.tempC, -30, 50)) return null; o.tempC = +r.tempC; }
     if (r.refillMin != null) { if (![0, 60, 90, 120].includes(+r.refillMin)) return null; o.refillMin = +r.refillMin; }
     if (r.next8h != null) { if (typeof r.next8h !== 'boolean') return null; o.next8h = r.next8h; }
+    if (r.sent != null) {   // Phase 4: what DynamFuel last wrote to Intervals.icu for this ride
+      if (!(r.sent && typeof r.sent.hash === 'string' && typeof r.sent.at === 'string' && (r.sent.carbs == null || Number.isInteger(r.sent.carbs)))) return null;
+      o.sent = { hash: r.sent.hash, at: r.sent.at, carbs: r.sent.carbs ?? null };
+    }
     if (r.planKind != null) { if (!['drinkOnly', 'drinkAndFood', 'withoutDrink'].includes(r.planKind)) return null; o.planKind = r.planKind; }
     if (r.id.startsWith('man-')) {
       if (!isIso(r.date) || !numIn(r.durationS, 600, 12 * 3600) || typeof (r.name ?? '') !== 'string') return null;

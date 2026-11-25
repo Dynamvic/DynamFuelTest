@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.3.6';
+const APP_VERSION = '0.4.0';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -12,9 +12,9 @@ const F = DFFmt, W = DFWorkout, E = DFEngine, RD = DFRides, BK = DFBackup;
 
 /* ---------- storage ---------- */
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('dynamfuel:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('dynamfuel:' + k, JSON.stringify(v)); } catch (e) { } },
-  del(k) { try { localStorage.removeItem('dynamfuel:' + k); } catch (e) { } }
+  get(k, d) { try { const v = localStorage.getItem(DF_PFX + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(DF_PFX + k, JSON.stringify(v)); } catch (e) { } },
+  del(k) { try { localStorage.removeItem(DF_PFX + k); } catch (e) { } }
 };
 const pad = n => String(n).padStart(2, '0');
 const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -139,11 +139,11 @@ function secIcu() {
     <div class="row"><button class="btn" data-act="icutest">${t('icu_test')}</button>${ICU.key && !UI.wz ? `<button class="btn danger" data-act="icuforget">${t('icu_forget')}</button>` : ''}</div>
     <p class="msg${UI.icuBad ? ' bad' : ''}" role="status">${esc(UI.icuMsg)}</p>`;
 }
-async function icuFetch(path) {
+async function icuFetch(path, opts = {}) {
   const key = String(ICU.key || '').trim(), id = String(ICU.athleteId || '').trim() || '0';
   if (!key) throw { code: 'nokey' };
   let res;
-  try { res = await fetch(`https://intervals.icu/api/v1/athlete/${encodeURIComponent(id)}${path}`, { headers: { Authorization: 'Basic ' + btoa('API_KEY:' + key) } }); }
+  try { res = await fetch(`https://intervals.icu/api/v1/athlete/${encodeURIComponent(id)}${path}`, Object.assign({}, opts, { headers: Object.assign({ Authorization: 'Basic ' + btoa('API_KEY:' + key) }, opts.body ? { 'Content-Type': 'application/json' } : {}) })); }
   catch (e) { throw { code: 'blocked' }; }
   if (res.status === 401 || res.status === 403) throw { code: 'auth' };
   if (!res.ok) throw { code: 'http', status: res.status };
@@ -183,7 +183,31 @@ async function fetchRides(quiet) {
   if (/^#(rides|ride\/)/.test(location.hash || '#rides')) rerender();
 }
 
-/* ---------- wizard ---------- */
+/* Phase 4 A: put DynamFuel's block in the planned workout (or take it out). Fresh GET first; only description (and an empty or
+   DynamFuel-set carbs_per_hour) is sent; if the workout itself changed after the PUT, the old description is put back. */
+async function iwWrite(remove) {
+  const B = UI.icuBlock, id = rideIdFromHash(); if (!B || !B.eventId || B.id !== id || UI.iwBusy) return;
+  UI.iwBusy = true; UI.iwMsg = t('loading'); UI.iwBad = false; rerender();
+  try {
+    const ev = await icuFetch(`/events/${B.eventId}`), before = DFIcuWrite.signature(ev);
+    const old = RIDES.get(id) || {}, lastCarbs = old.sent ? old.sent.carbs : null;
+    const body = { description: remove ? DFIcuWrite.stripBlock(ev.description) : DFIcuWrite.withBlock(ev.description, B.block) };
+    if (!remove) { const cv = DFIcuWrite.carbsToSend(ev.carbs_per_hour, lastCarbs, B.carbs); if (cv !== undefined) body.carbs_per_hour = cv; }
+    const after = await icuFetch(`/events/${B.eventId}`, { method: 'PUT', body: JSON.stringify(body) });
+    if (DFIcuWrite.signature(after) !== before) {
+      const back = { description: ev.description || '' }; if (body.carbs_per_hour !== undefined && ev.carbs_per_hour != null) back.carbs_per_hour = ev.carbs_per_hour;
+      await icuFetch(`/events/${B.eventId}`, { method: 'PUT', body: JSON.stringify(back) }).catch(() => { });
+      UI.iwMsg = t('iw_restored'); UI.iwBad = true;
+    } else {
+      const rec = Object.assign({ id }, old);
+      if (remove) delete rec.sent; else rec.sent = { hash: B.hash, at: new Date().toISOString(), carbs: body.carbs_per_hour !== undefined ? body.carbs_per_hour : lastCarbs };
+      RIDES.set(id, rec); await DB.put('rides', rec);
+      const e = EVENTS.find(x => x.id === B.eventId); if (e) { e.description = after.description; e.carbs_per_hour = after.carbs_per_hour; await DB.put('events', e); }
+      UI.iwMsg = remove ? t('iw_removed') : t('iw_done'); UI.iwBad = false;
+    }
+  } catch (e) { UI.iwMsg = icuError(e); UI.iwBad = true; }
+  UI.iwBusy = false; rerender();
+}
 const WZ = ['lang', 'health', 'body', 'gut', 'sweat', 'caf', 'bottle', 'allergy', 'icu'];
 const WZT = { lang: 'wz_lang_t', health: 'wz_health_t', body: 'wz_body_t', gut: 'wz_gut_t', sweat: 'wz_sweat_t', caf: 'wz_caf_t', bottle: 'wz_bottle_t', allergy: 'wz_allergy_t', icu: 'wz_icu_t' };
 function vWizard() {
@@ -318,7 +342,7 @@ function vRide(id) {
     <div class="fld"><span class="lbl">${t('ride_next')}</span>${chips('next8h', [[true, t('yes')], [false, t('no')]], ctx.next8h, 'b', 'rset')}${X.found ? `<small class="muted">${t('ride_next_found')}</small>` : ''}</div>
     ${!r.structured ? `<p class="small muted">${t('ride_manual_int', { z: doc.manualZone })} ${statusPill(manSt)}</p>` : ''}
     ${r.source === 'man' ? `<button class="btn danger" data-act="rdel">${t('ride_delete')}</button>` : ''}
-    ${r.description ? `<details class="inl"><summary>${t('ride_desc')}</summary><p class="small" style="white-space:pre-wrap">${esc(r.description)}</p></details>` : ''}</details>`;
+    ${r.description ? `<details class="inl"><summary>${t('ride_desc')}</summary><p class="small" style="white-space:pre-wrap">${esc(DFIcuWrite.stripBlock(r.description))}</p></details>` : ''}</details>`;
 
   /* during */
   const c = T.cho, fl = T.fluid, na = T.sodium, bottleMl = P.bottleMl;
@@ -376,6 +400,23 @@ function vRide(id) {
     hPack: t('sec_pack'), hTiming: t('sec_timing'), hBefore: t('sec_before'), hAfter: t('sec_after'), sub: t('app_sub'), foot: t('card_foot'),
     fileName: `dynamfuel-${r.date}-${String(r.name || goal).replace(/[^A-Za-z0-9]+/g, '-').slice(0, 30)}.png` };
   h += `<div class="row noprint"><button class="btn primary" data-act="card">${t('card_share')}</button><button class="btn" data-act="sticker">${t('card_sticker')}</button></div>`;
+
+  /* Phase 4 A: write the plan into the planned workout in Intervals.icu (switch in Settings, per ride, never automatic) */
+  if (SET.icuWrite && r.source === 'icu' && ICU.key) {
+    const timed = slotsPlain.filter((s, i) => (M.schedule[i] || { eat: [] }).eat.length).map(s => `${s.time} ${s.what}`);
+    const lines = [t('iw_targets', { c: c.gph, f: fl.mlph, n: na.none ? 0 : na.mgph, H: hpart }),
+      T.caffeine.on && T.caffeine.doses.length ? `${t('caffeine_t')}: ${T.caffeine.doses.map(d => d.mg + ' mg' + (d.clock ? ' ' + t('iw_at', { clock: d.clock }) : '')).join('; ')}` : '',
+      packLines(M).length && (withStock || c.gph === 0) ? `${t('iw_pack')}: ${packLines(M).join('; ')}` : '',
+      timed.length ? `${t('iw_times')}: ${timed.join('; ')}` : '',
+      drinkMl ? t('iw_drink', { ml: drinkMl, every }) : ''];
+    const block = DFIcuWrite.buildBlock(lines), sent = C.sent || null, hsh = DFIcuWrite.hash(block);
+    UI.icuBlock = { id: r.id, eventId: r.icuId, block, hash: hsh, carbs: c.gph };
+    h += `<section class="card noprint"><h2>Intervals.icu</h2>
+      <p class="small">${sent ? (sent.hash === hsh ? t('iw_sent', { d: F.date(sent.at.slice(0, 10)), t: sent.at.slice(11, 16) }) : t('iw_changed')) : t('iw_not_sent')}</p>
+      <details class="inl small"><summary>${t('iw_preview')}</summary><pre class="small" style="white-space:pre-wrap">${esc(block)}</pre></details>
+      <div class="row"><button class="btn primary" data-act="iwsend"${UI.iwBusy ? ' disabled' : ''}>${t('iw_send')}</button>${sent ? `<button class="btn" data-act="iwremove"${UI.iwBusy ? ' disabled' : ''}>${t('iw_remove')}</button>` : ''}</div>
+      <p class="msg${UI.iwBad ? ' bad' : ''}" role="status">${esc(UI.iwMsg || '')}</p></section>`;
+  }
 
   /* why */
   const ids = [];
@@ -684,7 +725,8 @@ function installCard() {
 function vSettings() {
   return `${topbar(t('settings_t'))}
     <section class="card"><h2>${t('set_lang')}</h2>${chips('lang', [['nl', 'Nederlands'], ['en', 'English']], lang(), 's', 'lang')}</section>
-    <section class="card"><h2>${t('set_icu')}</h2>${secIcu()}</section>
+    <section class="card"><h2>${t('set_icu')}</h2>${secIcu()}
+      <label class="check"><input type="checkbox" data-setb="icuWrite"${SET.icuWrite ? ' checked' : ''}><span>${t('iw_switch')}</span></label><small class="muted">${t('iw_switch_l')}</small></section>
     <section class="card"><div class="fld"><label class="lbl" for="s-start">${t('set_start')}</label><span class="tin time"><input id="s-start" type="time" data-set="usualStart" value="${esc(SET.usualStart || '')}"></span><small class="muted">${t('set_start_hint')}</small></div></section>
     ${wxCard()}
     <section class="card"><h2>${t('set_backup')}</h2><p class="small">${t('bk_l')}</p>
@@ -725,7 +767,7 @@ function route() {
 }
 function rerender() { const y = scrollY; route(); scrollTo(0, y); }
 document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'cond') UI.condOpen = ev.target.open; }, true);
-addEventListener('hashchange', () => { UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (!/^#own/.test(location.hash)) { UI.own = null; UI.ownErr = ''; UI.offMsg = ''; } if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
+addEventListener('hashchange', () => { UI.iwMsg = ''; UI.iwBad = false; UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (!/^#own/.test(location.hash)) { UI.own = null; UI.ownErr = ''; UI.offMsg = ''; } if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
 
 /* ---------- sheet, toast, update banner ---------- */
 function sheet(html) {
@@ -777,7 +819,8 @@ async function doRestore() {
   toast(r.fixed ? (r.fixed === 1 ? t('rs_fixed_1') : t('rs_fixed', { n: r.fixed })) : t('rs_done'));
 }
 async function eraseAll() {
-  Object.keys(localStorage).filter(k => k.startsWith('dynamfuel:') && k !== 'dynamfuel:device' && k !== 'dynamfuel:act').forEach(k => localStorage.removeItem(k));
+  // only this site's keys (T3): the live site never erases the test site's 'dynamfuel:<site>:' keys, and the lock stays
+  Object.keys(localStorage).filter(k => k.startsWith(DF_PFX) && !k.slice(DF_PFX.length).includes(':') && !['device', 'act', 'copied'].includes(k.slice(DF_PFX.length))).forEach(k => localStorage.removeItem(k));
   await DB.drop();
   location.hash = '#welcome'; location.reload();
 }
@@ -812,6 +855,7 @@ document.addEventListener('change', async ev => {
     return rerender();
   }
   if (el.dataset.icu) { ICU[el.dataset.icu] = el.value.trim(); saveIcu(); if (!UI.wz) toast(t('icu_saved_key')); return; }
+  if (el.dataset.setb) { SET[el.dataset.setb] = el.checked; saveSet(); toast(t('saved')); return rerender(); }
   if (el.dataset.set) { SET[el.dataset.set] = BK.isHHMM(el.value) ? el.value : null; saveSet(); toast(t('saved')); return; }
   if (el.dataset.add) { UI.add[el.dataset.add] = el.value; return; }
   if (el.dataset.own && UI.own) {
@@ -905,6 +949,8 @@ document.addEventListener('click', async ev => {
   if (a === 'ownsave' && UI.own) return ownSave();
   if (a === 'owndel' && UI.own && UI.own.id) return sheet(`<h2>${t('own_del')}</h2><p>${esc(UI.own.name)}</p><button class="btn danger big wide" data-act="owndelgo">${t('own_del')}</button>`);
   if (a === 'owndelgo' && UI.own && UI.own.id) { const id = UI.own.id; STOCK.delete(id); await DB.del('items', id); closeSheet(); UI.own = null; location.hash = '#stock'; return; }
+  if (a === 'iwsend') return iwWrite(false);
+  if (a === 'iwremove') return iwWrite(true);
   if (a === 'bk' || a === 'bkkey') return doBackup(a === 'bkkey');
   if (a === 'rsgo') return doRestore();
   if (a === 'erase') return sheet(`<h2>${t('erase_sure')}</h2><p>${t('erase_l')}</p><button class="btn danger big wide" data-act="erasego">${t('erase_go')}</button>`);
@@ -938,6 +984,7 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
     try { DATA.food = await fetch('data/food.json').then(x => x.json()); } catch (e) { DATA.food = null; }
     try { DATA.caffeine = await fetch('data/caffeine.json').then(x => x.json()); } catch (e) { DATA.caffeine = null; }
   } catch (e) { DATA.err = true; }
+  if (DF_MIGRATED) { try { await DB.copyShared(); } catch (e) { } }   // T3: first start of the test site after the split
   try { EVENTS = await DB.all('events'); (await DB.all('rides')).forEach(x => RIDES.set(x.id, x)); (await DB.all('items')).forEach(x => STOCK.set(x.id, x)); } catch (e) { }
   route();
   // tell the athlete once that a new version is running (the banner only shows when the update arrives while the app is open)

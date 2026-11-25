@@ -44,6 +44,12 @@
       }
       if (p.value != null) { const v = p.value * k; return { kind: 'pct', a: v, b: v, lo: v, hi: v }; }
     }
+    // zone range (e.g. "Z4-Z5" = {start:4, end:5}): from the bottom of the first zone to the top of the last, middle as intensity
+    if (u === 'power_zone' && p.value == null && p.start != null && p.end != null) {
+      const r1 = zoneRange(+p.start, zones, ss), r2 = zoneRange(+p.end, zones, ss);
+      if (r1 && r2) { const lo = Math.min(r1.lo, r2.lo), hi = Math.max(r1.hi, r2.hi), mid = (lo + hi) / 2; return { kind: 'zone', zone: `${p.start}-${p.end}`, a: mid, b: mid, lo, hi }; }
+      return { kind: 'unknown' };
+    }
     if (u === 'power_zone' && p.value != null) {
       const r = zoneRange(+p.value, zones, ss);
       if (r) { const mid = (r.lo + r.hi) / 2; return { kind: r.sweetSpot ? 'sweetspot' : 'zone', zone: +p.value, a: mid, b: mid, lo: r.lo, hi: r.hi }; }

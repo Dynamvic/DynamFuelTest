@@ -18,7 +18,7 @@
   // ride without structured steps (brief: ask duration + session type): one step in this zone, so timing and intensity
   // follow the session type. The zones come from rules MAN-01..03 (endurance Z2 coach, recovery Z1 proposed, key/race OPEN);
   // this table is only the fallback when no rules are passed and must stay equal to them (a test checks it).
-  const MANUAL_ZONE = { recovery: 1, endurance: 2, key: 4, race: 4 };
+  const MANUAL_ZONE = { recovery: 1, endurance: 2, key: 4, race: [4, 5] };   // a [from, to] pair = zone range (race Z4–Z5, coach 25-11-2026)
 
   const isRide = ev => !!ev && RIDE_TYPES.includes(ev.type) && (ev.category == null || ev.category === 'WORKOUT');
 
@@ -76,7 +76,7 @@
   /* the workout document for DFWorkout.parse: the event's steps + the athlete's zones, or one step for a ride without steps */
   /* rules (optional): data/rules.json .rules – MAN-01..03 give the zone per session type and the rule (with its status) */
   function manualRule(goal, rules) {
-    for (const id of ['MAN-01', 'MAN-02', 'MAN-03']) { const r = rules && rules[id]; if (r && r.zones && r.zones[goal] != null) return { id, zone: +r.zones[goal] }; }
+    for (const id of ['MAN-01', 'MAN-02', 'MAN-03', 'MAN-04']) { const r = rules && rules[id]; if (r && r.zones && r.zones[goal] != null) return { id, zone: Array.isArray(r.zones[goal]) ? r.zones[goal].map(Number) : +r.zones[goal] }; }
     return { id: null, zone: MANUAL_ZONE[goal] || MANUAL_ZONE.endurance };
   }
   function workoutDoc(ride, ath, profile, goal, rules) {
@@ -85,7 +85,8 @@
     const sportSettings = { power_zones: zones, sweet_spot_min: ath && ath.ssMin != null ? ath.ssMin : 84, sweet_spot_max: ath && ath.ssMax != null ? ath.ssMax : 97, ftp };
     if (ride.structured && ride.steps) return { duration: ride.durationS, ftp, steps: ride.steps, sportSettings, manual: false };
     const m = manualRule(MANUAL_ZONE[goal] ? goal : 'endurance', rules), zone = m.zone;
-    return { duration: ride.durationS, ftp, steps: [{ duration: ride.durationS, power: { value: zone, units: 'power_zone' } }], sportSettings, manual: true, manualZone: zone, manualRule: m.id };
+    const power = Array.isArray(zone) ? { start: zone[0], end: zone[1], units: 'power_zone' } : { value: zone, units: 'power_zone' };
+    return { duration: ride.durationS, ftp, steps: [{ duration: ride.durationS, power }], sportSettings, manual: true, manualZone: Array.isArray(zone) ? zone.join('–') : zone, manualRule: m.id };
   }
 
   /* ISO date helpers (local calendar dates as strings, no time zone maths) */

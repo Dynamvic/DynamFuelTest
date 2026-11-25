@@ -1,6 +1,6 @@
 'use strict';
 /* DynamFuel – access lock, the same mechanism as DynamCore (decision Q2: open for now, lock built but parked).
-   - Every phone gets a random device code (stored on the phone, key dynamfuel:device).
+   - Every phone gets a random device code (stored on the phone, key dynamfuel:device, per site).
    - The coach signs "device code + name + end date" on DynamCore's coach.html (same token format DCA1, same coach key).
    - The app checks the signature with the public key in key.js. No key in key.js = the app stays locked when switched on.
    Activation data is kept apart from the athlete data: back-ups and "erase everything" do not touch it. */
@@ -9,7 +9,7 @@
 const ACCESS_ENABLED = false;
 
 const ACT = { state: 'checking', info: null };
-const ACCESS_KEYS = { device: 'dynamfuel:device', act: 'dynamfuel:act' };
+const ACCESS_KEYS = { device: DF_PFX + 'device', act: DF_PFX + 'act' };   // per site (db.js, decision T3)
 const accStore = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }

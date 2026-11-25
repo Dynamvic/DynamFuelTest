@@ -280,7 +280,7 @@
     'EE-01': 'Je lichaam rendeert 20–25 %: 1 kJ arbeid ≈ 1 kcal verbruik (Ettema & Lorås 2009). Alleen ter info.',
     'HEAT-01': 'Koele drank helpt bij warmte (McCubbin 2020).', 'HEAT-02': 'Warme dag (vanaf {hotC} °C) en zweetverlies onbekend: {lph} l/u (regel van je coach).',
     'RND-01': 'Afgerond: koolhydraten op 5 g, vocht op 50 ml, natrium op 50 mg, cafeïne op 25 mg.',
-    'MAN-01': 'Duurrit zonder blokken: de app rekent met een constante intensiteit in zone 2 (regel van je coach).', 'MAN-02': 'Herstelrit zonder blokken: de app rekent met zone 1 (voorstel, nog te bevestigen door je coach).', 'MAN-03': 'Kernsessie of wedstrijd zonder blokken: de intensiteit is niet gekend; de app rekent voorlopig met zone 4 (nog te bevestigen).',
+    'MAN-01': 'Duurrit zonder blokken: de app rekent met een constante intensiteit in zone 2 (regel van je coach).', 'MAN-02': 'Herstelrit zonder blokken: de app rekent met zone 1 (regel van je coach).', 'MAN-03': 'Kernsessie zonder blokken: de intensiteit is niet gekend; de app rekent voorlopig met zone 4 (nog te bevestigen).', 'MAN-04': 'Wedstrijd zonder blokken: de app rekent met zone 4–5 (regel van je coach).',
     'METH-IF': 'Intensiteit (IF) berekend uit de geplande blokken.', 'GOAL-01': 'Zonder tag stelt de app een soort rit voor.', 'AGE-01': 'Alleen je geboortejaar is bekend: wie in het ritjaar 18 wordt, telt nog als onder 18 (veilige kant).'
   };
   const ren = {
@@ -327,7 +327,7 @@
     'EE-01': 'Your body is 20–25 % efficient: 1 kJ of work ≈ 1 kcal used (Ettema & Lorås 2009). For information only.',
     'HEAT-01': 'Cool drinks help in the heat (McCubbin 2020).', 'HEAT-02': 'Hot day (from {hotC} °C) and sweat loss unknown: {lph} l/h (your coach\'s rule).',
     'RND-01': 'Rounded: carbohydrate to 5 g, fluid to 50 ml, sodium to 50 mg, caffeine to 25 mg.',
-    'MAN-01': 'Endurance ride without blocks: the app assumes a steady intensity in zone 2 (your coach\'s rule).', 'MAN-02': 'Recovery ride without blocks: the app assumes zone 1 (proposal, your coach still has to confirm).', 'MAN-03': 'Key session or race without blocks: the intensity is not known; the app uses zone 4 for now (to confirm).',
+    'MAN-01': 'Endurance ride without blocks: the app assumes a steady intensity in zone 2 (your coach\'s rule).', 'MAN-02': 'Recovery ride without blocks: the app assumes zone 1 (your coach\'s rule).', 'MAN-03': 'Key session without blocks: the intensity is not known; the app uses zone 4 for now (to confirm).', 'MAN-04': 'Race without blocks: the app uses zone 4–5 (your coach\'s rule).',
     'METH-IF': 'Intensity (IF) calculated from the planned blocks.', 'GOAL-01': 'Without a tag the app suggests a type of ride.', 'AGE-01': 'Only your birth year is known: if you turn 18 in the ride year, you still count as under 18 (safe side).'
   };
   /* Phase 3: stock and pack list */
@@ -409,6 +409,19 @@
     own_mtc: 'Does it contain fructose or sugar besides glucose/maltodextrin?', own_mtc_l: 'Look at the ingredients. "Don\'t know" counts as glucose only (the safe side).',
     own_allerg: 'Contains (allergens)', own_traces: 'May contain traces of', own_check: 'I have checked every value on the label.',
     own_need_check: 'Check the values on the label and tick the box.', own_need: 'Enter at least name, serving and carbohydrate (and the water per dose for a drink).'
+  });  Object.assign(nl, {
+    iw_switch: 'Brandstofplan in Intervals.icu kunnen zetten', iw_switch_l: 'Daarna staat bij elke geplande rit een knop. DynamFuel schrijft alleen zijn eigen blok onderaan de beschrijving; de tekst van je coach blijft.',
+    iw_send: 'Zet in Intervals.icu', iw_remove: 'Uit Intervals.icu halen', iw_preview: 'Wat er in Intervals.icu komt',
+    iw_not_sent: 'Nog niet in Intervals.icu.', iw_sent: 'In Intervals.icu gezet op {d} om {t}.', iw_changed: 'Je plan is veranderd sinds je het in Intervals.icu zette: zet het opnieuw.',
+    iw_done: 'In Intervals.icu gezet.', iw_removed: 'Uit Intervals.icu gehaald.', iw_restored: 'Intervals.icu paste de training aan: je oude beschrijving is teruggezet. Verwittig je coach.',
+    iw_targets: '{c} g{H} koolhydraten · {f} ml{H} · {n} mg{H} natrium', iw_at: 'om {clock}', iw_pack: 'Mee', iw_times: 'Eten', iw_drink: 'Drinken: ± {ml} ml elke {every} min'
+  });
+  Object.assign(en, {
+    iw_switch: 'Allow putting the fuel plan in Intervals.icu', iw_switch_l: 'Every planned ride then gets a button. DynamFuel only writes its own block at the end of the description; your coach\'s text stays.',
+    iw_send: 'Put in Intervals.icu', iw_remove: 'Remove from Intervals.icu', iw_preview: 'What goes into Intervals.icu',
+    iw_not_sent: 'Not in Intervals.icu yet.', iw_sent: 'Put in Intervals.icu on {d} at {t}.', iw_changed: 'Your plan changed since you put it in Intervals.icu: put it again.',
+    iw_done: 'Put in Intervals.icu.', iw_removed: 'Removed from Intervals.icu.', iw_restored: 'Intervals.icu changed the workout: your old description was put back. Tell your coach.',
+    iw_targets: '{c} g{H} carbohydrate · {f} ml{H} · {n} mg{H} sodium', iw_at: 'at {clock}', iw_pack: 'Take', iw_times: 'Eat', iw_drink: 'Drink: ± {ml} ml every {every} min'
   });  Object.assign(rnl, {
     'MATCH-01': 'Hele porties uit je voorraad, binnen {choTolPct} % van je doel, met hoogstens {maxDistinct} soorten producten naast drank (regel van je coach).',
     'MATCH-02': 'Bij gelijke keuze: eerst binnen {closeTolPct} % van het doel, dan zo weinig mogelijk producten, dan je favorieten.',
