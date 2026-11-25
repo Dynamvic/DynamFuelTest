@@ -4,7 +4,7 @@
    Storage: localStorage keys 'dynamfuel:*' (settings, profile, icu, athlete, meta) and IndexedDB 'dynamfuel-db' (db.js).
    Everything stays on this phone; the only network calls go to Intervals.icu with the athlete's own key. */
 
-const APP_VERSION = '0.4.2';
+const APP_VERSION = '0.5.0';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -106,7 +106,12 @@ function athCard() {
     <div class="row"><button class="btn" data-act="useath">${t('icu_ath_use')}</button></div></div>`;
 }
 const secBody = () => `<p class="small muted">${t('body_why')}</p>${numField('massKg', t('massKg'), 'kg')}${numField('ftpW', t('ftpW'), 'W', t('ftp_hint'))}${numField('lt1W', t('lt1W') + ` (${t('optional')})`, 'W')}${athCard()}`;
-const secGut = () => `${numField('gutCapGph', t('gutCapGph'), lang() === 'en' ? 'g/h' : 'g/u', t('gut_hint'))}${check('gutTrained', t('gutTrained'))}`;
+/* coach Q3: quick choices next to the free field (input shortcuts; the engine's caps still decide the target) */
+function secGut() {
+  const u = lang() === 'en' ? 'g/h' : 'g/u', D = target();
+  return `<div class="fld"><span class="lbl">${t('gutCapGph')}</span>${chips('gutCapGph', DFUi.GUT_CHIPS.map(v => [v, v == null ? t('gut_unknown') : `${v} ${u}`]), D.gutCapGph ?? null, 'n', 'setf', t('gutCapGph'))}
+    <small class="muted">${t('gut_hint')}</small></div>${numField('gutCapGph', t('gut_other'), u)}${check('gutTrained', t('gutTrained'))}`;
+}
 function secSweat() {
   const D = target();
   return `${numField('sweatRateLph', t('sweatRateLph'), lang() === 'en' ? 'l/h' : 'l/u', D.sweatRateLph == null ? t('sweat_unknown') : '')}
@@ -227,7 +232,7 @@ async function iwWrite(remove) {
 const WZ = ['lang', 'health', 'body', 'gut', 'sweat', 'caf', 'bottle', 'allergy', 'icu'];
 const WZT = { lang: 'wz_lang_t', health: 'wz_health_t', body: 'wz_body_t', gut: 'wz_gut_t', sweat: 'wz_sweat_t', caf: 'wz_caf_t', bottle: 'wz_bottle_t', allergy: 'wz_allergy_t', icu: 'wz_icu_t' };
 function vWizard() {
-  if (!UI.wz) UI.wz = { i: 0, d: clone(P) };
+  if (!UI.wz) UI.wz = { i: 0, d: DFUi.withDefaults(clone(P)) };   // coach Q2/Q4: 2 cages, bedtime 23:00 (only when empty)
   const st = WZ[UI.wz.i], n = WZ.length, i = UI.wz.i;
   let body = '';
   if (st === 'lang') body = `<img class="logo-big" src="icons/icon-512.png" alt="DynamFuel" width="260" height="260"><p class="lead">${t('wz_lang_l')}</p>
@@ -272,13 +277,17 @@ function vRides() {
     ${UI.fetchErr ? `<p class="msg bad" role="alert">${esc(UI.fetchErr)}</p>` : ''}</section>`;
   if (!ICU.key) html += `<section class="card notice"><p>${t('rides_connect')}</p><div class="row"><a class="btn primary" href="#settings">${t('rides_connect_btn')}</a></div></section>`;
   if (!list.length && ICU.key && !UI.fetching) html += `<p class="muted">${t('rides_none')}</p>`;
+  // UX #18: no stock yet → say what to do next (the pack list needs it)
+  if (!stockList().length) html += `<section class="card notice"><h3>${t('rides_stock_t')}</h3><p class="small">${t('rides_stock_l')}</p><div class="row"><a class="btn primary" href="#stock">${t('rides_stock_btn')}</a></div></section>`;
   let day = '';
   list.forEach(r => {
     if (r.date !== day) { day = r.date; html += `<div class="dayh">${esc(dayLabel(r.date))}</div>`; }
     const C = RIDES.get(r.id) || {}, io = C.indoor != null ? C.indoor : r.indoor;
+    // UX #9: the same start time the ride screen uses (own, planned, usual); open questions in plain words
+    const start = C.start || r.time || SET.usualStart || null, nq = (start ? 0 : 1) + (io == null && r.type !== 'VirtualRide' ? 1 : 0);
     html += `<a class="ride" href="#ride/${encodeURIComponent(r.id)}"><b>${esc(r.name || t('g_endurance'))}</b>
-      <span class="meta"><span class="tabular">${esc(C.start || r.time || t('no_time'))}</span><span class="tabular">${r.durationS ? F.dur(r.durationS) : ''}</span>
-      <span>${io === true ? t('indoor') : io === false ? t('outdoor') : t('io_unknown')}</span>
+      <span class="meta">${start ? `<span class="tabular">${esc(start)}</span>` : ''}<span class="tabular">${r.durationS ? F.dur(r.durationS) : ''}</span>
+      ${io === true ? `<span>${t('indoor')}</span>` : io === false ? `<span>${t('outdoor')}</span>` : ''}${nq ? `<span class="warnc-t">${nq === 1 ? t('ride_q_1') : t('ride_q_n', { n: nq })}</span>` : ''}
       ${r.goalTag ? `<span class="pill acc">${esc(r.goalTag)}</span>` : ''}${r.source === 'man' ? `<span class="pill coach">${t('by_hand')}</span>` : !r.structured ? `<span class="pill coach">${t('no_steps')}</span>` : ''}</span></a>`;
   });
   if (skipped) html += `<p class="small muted">${skipped === 1 ? t('rides_skipped_1') : t('rides_skipped', { n: skipped })}</p>`;
@@ -333,6 +342,8 @@ function vRide(id) {
   let h = topbar(r.name || t('g_' + goal), '#rides');
   h += `<p class="meta"><span>${esc(dayLabel(r.date))}</span><span class="tabular">${esc(X.start || t('no_time'))}</span><span class="tabular">${F.dur(parsed.durationS)}</span>
     ${T.intensity.ifactor != null ? `<span>${t('ride_if', { v: F.num(T.intensity.ifactor, 2) })}</span>` : ''}${r.tags.map(g => `<span class="pill acc">${esc(g)}</span>`).join('')}</p>`;
+  const shareRow = `<div class="row noprint"><button class="btn primary" data-act="card">${t('card_share')}</button><button class="btn" data-act="sticker">${t('card_sticker')}</button></div>`;
+  h += shareRow;   // UX #4: share at the top too (UI.fuel is built further down, before any tap can happen)
 
   /* warnings */
   const warn = [];
@@ -376,7 +387,7 @@ function vRide(id) {
   if (T.warnings.includes('heat_cool_drinks') && ctx.tempC != null && ctx.tempC >= R.rules['HEAT-02'].hotC) notes.push(t('w_heat', { c: R.rules['HEAT-01'].coolC }));
   if (r.carbsPerHour) notes.push(t('ride_carbs_icu', { g: ns(r.carbsPerHour) }));
   h += `<section class="card"><h2>${t('sec_during')}</h2><div class="big3">
-    <div class="tile"><span class="k">${t('cho')}</span><span class="v">${c.gph}<small> g${hpart}</small></span><span class="s">${c.gph || c.optional ? t('range', { lo: c.lo, hi: c.hi }) : ''}</span>${statusPill(c.status)}</div>
+    <div class="tile"><span class="k">${t('cho')}</span><span class="v">${c.gph}<small> g${hpart}</small></span><span class="s">${(c.gph || c.optional) && DFUi.isRange(c.lo, c.hi) ? t('range', { lo: c.lo, hi: c.hi }) : ''}</span>${statusPill(c.status)}</div>
     <div class="tile"><span class="k">${t('fluid')}</span><span class="v">${fl.mlph}<small> ml${hpart}</small></span><span class="s">${t('total_ml', { ml: fl.totalMl })}</span>${statusPill(fl.status)}</div>
     <div class="tile"><span class="k">${t('sodium')}</span><span class="v">${na.none ? '–' : na.mgph}<small>${na.none ? '' : ' mg' + hpart}</small></span><span class="s">${na.none ? t('na_none') : t('na_perl', { mg: na.mgPerL })}</span>${statusPill(na.status)}</div></div>
     ${c.gph ? `<p class="small muted">${t('total_g', { g: c.totalG })}</p>` : ''}
@@ -386,11 +397,18 @@ function vRide(id) {
 
   /* timing: with stock, the products per moment (matcher schedule); without, what kind of intake fits */
   const every = R.rules['TIME-02'].everyMin, drinkMl = F.roundTo(fl.mlph * every / 60, R.rules['RND-01'].fluidMl), withStock = stockList().length > 0;
-  h += `<section class="card"><h2>${t('sec_timing')} ${statusPill(manSt)}</h2>${T.slots.length ? `<div class="slots">${T.slots.map((s, i) => {
-    const sc = M.schedule[i] || { eat: [], drinkMl }, eat = sc.eat.map(e => esc(itemName(e.id))).join(' + ');
+  /* UX #3: the usual drink amount once, then only the moments with something to eat (or another drink amount), like the fuel card */
+  const useStock = withStock && T.cho.gph > 0;
+  const tRows = DFUi.timingRows(T.slots, M.schedule, drinkMl, (s, sc) => useStock ? sc.eat.length > 0 : T.cho.gph > 0);
+  const tRow = ({ i, eat: hasEat, drinkMl: odd }) => {
+    const s = T.slots[i], sc = M.schedule[i] || { eat: [], drinkMl }, eat = sc.eat.map(e => esc(itemName(e.id))).join(' + ');
     const kind = s.sustained ? t('slot_sustained') : s.easy ? t('slot_food') : t('slot_gel');
-    const parts = [withStock && T.cho.gph > 0 ? (eat ? `<b>${eat}</b>` : '') : kind, sc.drinkMl ? t('slot_drink', { ml: sc.drinkMl }) : ''].filter(Boolean);
-    return `<div class="slotr"><b>${X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min })}</b><span>${parts.join(' · ')}${withStock && eat && s.sustained ? `<br><small class="muted">${t('slot_sustained')}</small>` : ''}</span></div>`; }).join('')}</div>` : `<p class="muted">${t('slot_none')}</p>`}</section>`;
+    const parts = [hasEat ? (useStock ? `<b>${eat}</b>` : kind) : '', odd ? t('slot_drink', { ml: odd }) : ''].filter(Boolean);
+    return `<div class="slotr"><b>${X.start ? F.clock(X.start, s.min) : t('slot_min', { m: s.min })}</b><span>${parts.join(' · ')}${useStock && eat && s.sustained ? `<br><small class="muted">${t('slot_sustained')}</small>` : ''}</span></div>`;
+  };
+  h += `<section class="card"><h2>${t('sec_timing')} ${statusPill(manSt)}</h2>${T.slots.length && (drinkMl || tRows.length)
+    ? `${drinkMl && T.slots.length ? `<p><b>${t('iw_drink', { ml: drinkMl, every })}</b></p>` : ''}${tRows.length ? `<div class="slots">${tRows.map(tRow).join('')}</div>` : ''}`
+    : `<p class="muted">${t('slot_none')}</p>`}</section>`;
 
   /* before / after / energy */
   h += `<section class="card"><h2>${t('sec_before')}</h2>${preText(T.pre)}</section>`;
@@ -409,14 +427,14 @@ function vRide(id) {
   UI.fuel = { title: r.name || t('g_' + goal), meta: [dayLabel(r.date), X.start || '', F.dur(parsed.durationS), t('g_' + goal)].filter(Boolean).join(' · '),
     drink: drinkMl ? t('iw_drink', { ml: drinkMl, every }) : '', drinkShort: drinkMl ? t('stk_drink', { ml: drinkMl, every }) : '',
     metaShort: `${F.date(r.date)} ${X.start || ''}`.trim(), target: `${c.gph} g${hpart} · ${fl.mlph} ml${hpart}`,
-    tiles: [{ k: t('cho'), v: String(c.gph), u: 'g' + hpart, s: c.gph || c.optional ? t('range', { lo: c.lo, hi: c.hi }) : '' },
+    tiles: [{ k: t('cho'), v: String(c.gph), u: 'g' + hpart, s: (c.gph || c.optional) && DFUi.isRange(c.lo, c.hi) ? t('range', { lo: c.lo, hi: c.hi }) : '' },
       { k: t('fluid'), v: String(fl.mlph), u: 'ml' + hpart, s: t('total_ml', { ml: fl.totalMl }) },
       { k: t('sodium'), v: na.none ? '–' : String(na.mgph), u: na.none ? '' : 'mg' + hpart, s: '' }],
-    caf: `${t('caffeine_t')}: ${cafLines(T.caffeine).join('; ')}${cafOpen ? ` (${t('open_badge')})` : ''}`, cafOpen,
+    caf: `${t('caffeine_t')}: ${cafLines(T.caffeine).join('; ').replace(/^\p{Lu}(?!\p{Lu})/u, x => x.toLowerCase())}${cafOpen ? ` (${t('open_badge')})` : ''}`, cafOpen,
     pack: withStock || T.cho.gph === 0 ? packLines(M) : [], slots: slotsPlain, pre: preLines(T.pre), post: postLines(T.post),
     hPack: t('sec_pack'), hTiming: t('sec_timing'), hBefore: t('sec_before'), hAfter: t('sec_after'), sub: t('app_sub'), foot: t('card_foot'),
     fileName: `dynamfuel-${r.date}-${String(r.name || goal).replace(/[^A-Za-z0-9]+/g, '-').slice(0, 30)}.png` };
-  h += `<div class="row noprint"><button class="btn primary" data-act="card">${t('card_share')}</button><button class="btn" data-act="sticker">${t('card_sticker')}</button></div>`;
+  h += shareRow;
 
   /* Phase 4 A: write the plan into the planned workout in Intervals.icu (switch in Settings, per ride, never automatic) */
   if (SET.icuWrite && r.source === 'icu' && ICU.key) {
@@ -538,15 +556,15 @@ function servingText(it) {
   const s = it.serving || {}; return [s.amount != null ? `${ns(s.amount)} ${s.unit || ''}`.trim() : '', s.format || ''].filter(Boolean).join(' · ');
 }
 function itemRow(it) {
-  const s = STOCK.get(it.id) || { qty: 0 }, a = DFMatch.allowed(it, P), H = lang() === 'en' ? '' : '';
+  const s = STOCK.get(it.id) || { qty: 0 }, a = DFMatch.allowed(it, P), nm = esc(`${it.brand} ${it.name}`.trim());   // UX #14: labels name the product
   const facts = [it.choG != null ? `${ns(it.choG)} g ${t('cho').toLowerCase()}` : null, it.sodiumMg != null ? `${ns(it.sodiumMg)} mg ${t('sodium').toLowerCase()}` : null].filter(Boolean).join(' · ');
   return `<div class="card item${s.qty > 0 ? ' instock' : ''}"><div class="row between nowrap"><div class="grow"><b>${esc(it.brand)} ${esc(it.name)}</b>
       <div class="meta"><span>${facts}</span><span>${esc(servingText(it))}</span>${it.mtc ? `<span class="pill coach">${t('gf')}</span>` : ''}${it.caffeineMg > 0 ? `<span class="pill open">${t('stock_caf')}</span>` : ''}</div></div>
-      <button class="iconbtn star" data-act="sfav" data-id="${esc(it.id)}" aria-pressed="${!!s.fav}" aria-label="${t('stock_fav')}">${s.fav ? '★' : '☆'}</button></div>
+      <button class="iconbtn star" data-act="sfav" data-id="${esc(it.id)}" aria-pressed="${!!s.fav}" aria-label="${t('stock_fav')}: ${nm}">${s.fav ? '★' : '☆'}</button></div>
     ${!a.ok ? `<p class="small err">${t('excl_' + a.why)}</p>` : ''}${it.food ? foodWeights(it) : ''}
-    <div class="row between"><div class="row stepper"><button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="-1" aria-label="${t('stock_less')}"${s.qty > 0 ? '' : ' disabled'}>−</button>
-      <input type="text" inputmode="numeric" class="qty" data-sqid="${esc(it.id)}" value="${s.qty || 0}" aria-label="${esc(it.brand + ' ' + it.name)}">
-      <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}">+</button><span class="muted small">${it.food ? esc((foodById(it.id).unit || {})[lang()] || '') : t('u_' + it.category)}</span></div>
+    <div class="row between"><div class="row stepper"><button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="-1" aria-label="${t('stock_less')}: ${nm}"${s.qty > 0 ? '' : ' disabled'}>−</button>
+      <input type="text" inputmode="numeric" class="qty" data-sqid="${esc(it.id)}" value="${s.qty || 0}" aria-label="${nm}">
+      <button class="iconbtn" data-act="sqty" data-id="${esc(it.id)}" data-d="1" aria-label="${t('stock_more')}: ${nm}">+</button><span class="muted small">${it.food ? esc((foodById(it.id).unit || {})[lang()] || '') : t('u_' + it.category)}</span></div>
       <span class="row">${it.own ? `<a class="linkbtn" href="#own/${encodeURIComponent(it.id)}">${t('own_edit_s')}</a>` : ''}<button class="linkbtn" data-act="shide" data-id="${esc(it.id)}">${s.hidden ? t('stock_unhide') : t('stock_hide')}</button></span></div></div>`;
 }
 /* real food: weight per part (the source weight is prefilled where one exists) + where the values come from */
@@ -556,20 +574,26 @@ function foodWeights(it) {
       <span class="tin"><input type="text" inputmode="decimal" data-gid="${esc(f.id)}" data-gi="${i}" value="${esc(ns(it.grams[i]))}" placeholder="?"><span>g</span></span></label>`).join('')}</div>
     <details class="inl small"><summary>${t('food_src')}</summary><ul class="plain small muted">${f.parts.map(p => `<li>${esc(p.ref)}${p.gSource ? ` · ${esc(p.gSource)}` : ''}</li>`).join('')}${f.mtcBasis ? `<li>${esc(f.mtcBasis)}</li>` : ''}</ul></details>`;
 }
+/* UX #1: "All / In stock" combined with a chip per kind; favourites first, then in stock (coach Q1, DFUi.filterStock) */
 function vStock() {
-  const f = UI.stockFilter || 'all', items = libItems();
-  const st = id => STOCK.get(id) || {};
-  let h = topbar(t('stock_t')) + `<p class="small muted">${t('stock_l')}</p>` + chips('stockFilter', [['all', t('stock_all')], ['in', t('stock_in')]], f, 's', 'sfilter');
+  const f = UI.stockFilter || 'all', items = libItems(), hasOwn = items.some(it => it.own);
+  let cat = UI.stockCat || 'all'; if (cat === 'own' && !hasOwn) cat = 'all';
+  const st = id => STOCK.get(id) || {}, stObj = Object.fromEntries(STOCK);
+  const catOpts = [['all', t('stock_allcat')]].concat(CATS.map(([c, key]) => [c, t(key)]), hasOwn ? [['own', t('own_t')]] : []);
+  let h = topbar(t('stock_t')) + `<p class="small muted">${t('stock_l')}</p>` + chips('stockFilter', [['all', t('stock_all')], ['in', t('stock_in')]], f, 's', 'sfilter', t('stock_t'))
+    + chips('stockCat', catOpts, cat, 's', 'scat', t('own_cat'));
   h += `<a class="btn wide" href="#own">${IC.plus}${t('own_add')}</a>`;
-  const own = items.filter(it => it.own && !st(it.id).hidden && (f === 'all' || st(it.id).qty > 0));
-  if (own.length) h += `<h2 class="dayh">${t('own_t')}</h2>` + own.map(itemRow).join('');
-  let any = own.length > 0;
-  CATS.forEach(([cat, key]) => {
-    const list = items.filter(it => it.category === cat && !it.own && !st(it.id).hidden && (f === 'all' || st(it.id).qty > 0));
-    if (!list.length) return; any = true;
-    h += `<h2 class="dayh">${t(key)}</h2>` + list.map(itemRow).join('');
-  });
-  if (!any) h += `<p class="muted">${t('stock_none')}</p>`;
+  const list = DFUi.filterStock(items, stObj, { cat, inStock: f === 'in' });
+  if (cat === 'all') {
+    const own = list.filter(it => it.own);
+    if (own.length) h += `<h2 class="dayh">${t('own_t')}</h2>` + own.map(itemRow).join('');
+    CATS.forEach(([c, key]) => { const L = list.filter(it => it.category === c && !it.own); if (L.length) h += `<h2 class="dayh">${t(key)}</h2>` + L.map(itemRow).join(''); });
+  } else h += list.map(itemRow).join('');
+  if (!list.length) {
+    // UX #18: an empty list says what to do next
+    if (f === 'in') h += `<div class="card notice"><p>${t('stock_none_in')}</p><div class="row"><button class="btn primary" data-act="sfilter" data-v="all">${t('stock_show_all')}</button></div></div>`;
+    else h += `<p class="muted">${t('stock_none_cat')}</p>`;
+  }
   const hid = items.filter(it => st(it.id).hidden);
   if (hid.length) h += `<details class="card"><summary>${t('stock_hidden', { n: hid.length })}</summary>${hid.map(itemRow).join('')}</details>`;
   return h;
@@ -594,7 +618,7 @@ function vOwn(id) {
   const D = UI.own && UI.own.id === (id || null) ? UI.own : (UI.own = ownDraft(id));
   const u = D.unit, nf = (f, label, unit) => `<div class="fld"><label class="lbl" for="o-${f}">${label}</label><span class="tin"><input id="o-${f}" type="text" inputmode="decimal" data-own="${f}" value="${esc(ns(D[f]))}"><span>${unit}</span></span><span class="err">${UI.err['own_' + f] || ''}</span></div>`;
   const scan = canScan() ? `<button class="btn" data-act="offscan">${t('own_scan')}</button><button class="btn" data-act="offscanstop" hidden>${t('own_scan_stop')}</button>` : '';
-  return `${topbar(id ? t('own_edit') : t('own_add'), '#stock')}
+  return `${topbar(id ? t('own_edit') : t('own_new'), '#stock')}
     <section class="card"><h2>${t('own_bar')}</h2><p class="small muted">${t('own_bar_l')}</p>
       <div class="row nowrap"><input id="offcode" class="grow wxq" type="text" inputmode="numeric" autocomplete="off" placeholder="${t('own_code')}" aria-label="${t('own_code')}" value="${esc(D.code || '')}">
         <button class="btn" data-act="offsearch">${t('wx_search')}</button></div>
@@ -782,8 +806,27 @@ function route() {
   const tab = h === 'ride' || h === 'add' ? 'rides' : h === 'own' ? 'stock' : h;   // stock has its own tab
   document.querySelectorAll('nav.tabs a').forEach(a => a.toggleAttribute('aria-current', a.dataset.tab === tab));
   document.querySelectorAll('nav.tabs [data-l]').forEach(s => { s.textContent = t(s.dataset.l); });
+  tabs.setAttribute('aria-label', t('nav_l'));
 }
-function rerender() { const y = scrollY; route(); scrollTo(0, y); }
+/* UX #5: a redraw keeps the keyboard focus on the same field or button (found again by its id or its data-* attributes) */
+const FOCUS_KEYS = ['act', 'f', 'v', 'id', 'd', 'own', 'gid', 'gi', 'sqid', 'rf', 'add', 'set', 'setb', 'icu', 'cat'];
+function focusKey(el) {
+  if (!el || el === document.body || !el.closest || !el.closest('#view')) return null;
+  if (el.id) return '#' + CSS.escape(el.id);
+  const sel = FOCUS_KEYS.filter(k => el.dataset[k] != null).map(k => `[data-${k}="${CSS.escape(el.dataset[k])}"]`).join('');
+  return sel || null;
+}
+function rerender() {
+  const k = focusKey(document.activeElement), y = scrollY;
+  route(); scrollTo(0, y);
+  if (k) { const el = $(k); if (el && el !== document.activeElement) try { el.focus({ preventScroll: true }); } catch (e) { } }
+}
+/* after a field changes, redraw once the browser has moved the focus on (keyboard "Next", Tab, or a tap on a button) */
+let ptrDown = false, ptrPending = false;
+addEventListener('pointerdown', () => { ptrDown = true; }, true);
+addEventListener('pointerup', () => { ptrDown = false; if (ptrPending) { ptrPending = false; setTimeout(rerender, 0); } }, true);
+addEventListener('pointercancel', () => { ptrDown = false; if (ptrPending) { ptrPending = false; setTimeout(rerender, 0); } }, true);
+const rerenderSoon = () => { if (ptrDown) ptrPending = true; else setTimeout(rerender, 0); };
 document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'cond') UI.condOpen = ev.target.open; }, true);
 addEventListener('hashchange', () => { UI.iwMsg = ''; UI.iwBad = false; UI.iwOrig = null; UI.err = {}; UI.icuMsg = ''; UI.addErr = ''; UI.condOpen = false; if (!/^#own/.test(location.hash)) { UI.own = null; UI.ownErr = ''; UI.offMsg = ''; } if (location.hash !== '#add') UI.add = null; route(); scrollTo(0, 0); });
 
@@ -880,7 +923,7 @@ document.addEventListener('change', async ev => {
   if (el.dataset.f) {
     const f = el.dataset.f, r = parseField(f, el), D = target();
     if (r.err) UI.err[f] = r.err; else { delete UI.err[f]; D[f] = r.v; if (f === 'ftpW' || f === 'massKg') D.src = Object.assign({}, D.src, { [f === 'ftpW' ? 'ftp' : 'mass']: 'local' }); commitProfile(); }
-    return rerender();
+    return rerenderSoon();
   }
   if (el.dataset.icu) { ICU[el.dataset.icu] = el.value.trim(); saveIcu(); if (!UI.wz) toast(t('icu_saved_key')); return; }
   if (el.dataset.setb) { SET[el.dataset.setb] = el.checked; saveSet(); toast(t('saved')); return rerender(); }
@@ -892,20 +935,20 @@ document.addEventListener('change', async ev => {
     if (f === 'name' || f === 'brand') { D[f] = el.value.trim(); return; }
     const s = String(el.value).trim().replace(',', '.'), x = +s, rg = OWN_NUM[f];
     if (s === '') { D[f] = null; delete UI.err['own_' + f]; }
-    else if (!isFinite(x) || x < rg[0] || x > rg[1]) { UI.err['own_' + f] = t('err_range', { lo: ns(rg[0]), hi: ns(rg[1]) }); return rerender(); }
+    else if (!isFinite(x) || x < rg[0] || x > rg[1]) { UI.err['own_' + f] = t('err_range', { lo: ns(rg[0]), hi: ns(rg[1]) }); return rerenderSoon(); }
     else { D[f] = Math.round(x * 10) / 10; delete UI.err['own_' + f]; }
     if (f === 'saltG') { D.sodiumMg = D.saltG == null ? null : Math.round(D.saltG / 2.5 * 1000); D.sodiumBasis = 'calc from salt (own label)'; }
     if (PER_SERVING.includes(f)) D.typed = Object.assign({}, D.typed, { [f]: true });
     if (f === 'amount') ownApplyPer100(D);
-    return rerender();
+    return rerenderSoon();
   }
   if (el.dataset.gid) {
     const id = el.dataset.gid, i = +el.dataset.gi, f = foodById(id); if (!f) return;
     const s = String(el.value).trim().replace(',', '.'), x = +s, g = (STOCK.get(id) || {}).grams ? STOCK.get(id).grams.slice() : f.parts.map(() => null);
-    if (s === '') g[i] = null; else if (isFinite(x) && x > 0 && x <= 1000) g[i] = Math.round(x * 10) / 10; else { toast(t('err_range', { lo: 1, hi: 1000 }), true); return rerender(); }
-    await saveStock(id, { grams: g }); return rerender();
+    if (s === '') g[i] = null; else if (isFinite(x) && x > 0 && x <= 1000) g[i] = Math.round(x * 10) / 10; else { toast(t('err_range', { lo: 1, hi: 1000 }), true); return rerenderSoon(); }
+    await saveStock(id, { grams: g }); return rerenderSoon();
   }
-  if (el.dataset.sqid) { const n = parseInt(el.value, 10); await saveStock(el.dataset.sqid, { qty: isFinite(n) ? n : 0 }); return rerender(); }
+  if (el.dataset.sqid) { const n = parseInt(el.value, 10); await saveStock(el.dataset.sqid, { qty: isFinite(n) ? n : 0 }); return rerenderSoon(); }
   if (el.dataset.rf) {
     const id = rideIdFromHash(), f = el.dataset.rf; if (!id) return;
     if (f === 'start') await saveRideChoice(id, 'start', BK.isHHMM(el.value) ? el.value : null);
@@ -915,9 +958,11 @@ document.addEventListener('change', async ev => {
       else if (!isFinite(x) || x < -30 || x > 50) UI.err.tempC = t('err_range', { lo: -30, hi: 50 });
       else { delete UI.err.tempC; await saveRideChoice(id, 'tempC', x); }
     }
-    rerender();
+    rerenderSoon();
   }
 });
+/* UX #2: tapping a quantity selects it, so typing 6 replaces the 0 */
+document.addEventListener('focusin', ev => { const el = ev.target; if (el && el.classList && el.classList.contains('qty')) setTimeout(() => { try { el.select(); } catch (e) { } }, 0); });
 document.addEventListener('input', ev => { const el = ev.target; if (el.dataset && el.dataset.add && UI.add) UI.add[el.dataset.add] = el.value; });
 
 document.addEventListener('click', async ev => {
@@ -926,7 +971,11 @@ document.addEventListener('click', async ev => {
   if (a === 'closesheet') return closeSheet();
   if (a === 'updreload') return location.reload();
   if (a === 'lang') { SET.lang = el.dataset.v; saveSet(); return rerender(); }
-  if (a === 'setf') { const D = target(); D[el.dataset.f] = castV(el.dataset.v, el.dataset.t); delete UI.err[el.dataset.f]; commitProfile(); return rerender(); }
+  if (a === 'setf') {
+    const D = target(); D[el.dataset.f] = castV(el.dataset.v, el.dataset.t); delete UI.err[el.dataset.f];
+    if (el.dataset.f === 'caffeine') D.bedtime = DFUi.withDefaults(D).bedtime;   // coach Q4: bedtime 23:00 prefilled when empty
+    commitProfile(); return rerender();
+  }
   if (a === 'togf') { const D = target(), f = el.dataset.f, v = el.dataset.v; D[f] = (D[f] || []).includes(v) ? D[f].filter(x => x !== v) : [...(D[f] || []), v]; commitProfile(); return rerender(); }
   if (a === 'wzback') { UI.wz.i = Math.max(0, UI.wz.i - 1); UI.wzErr = ''; UI.err = {}; route(); return scrollTo(0, 0); }
   if (a === 'wznext' || a === 'wzfinish') {
@@ -958,6 +1007,7 @@ document.addEventListener('click', async ev => {
   if (a === 'sfav') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { fav: !s.fav }); return rerender(); }
   if (a === 'shide') { const s = STOCK.get(el.dataset.id) || {}; await saveStock(el.dataset.id, { hidden: !s.hidden }); return rerender(); }
   if (a === 'sfilter') { UI.stockFilter = el.dataset.v; return rerender(); }
+  if (a === 'scat') { UI.stockCat = el.dataset.v; return rerender(); }
   if (a === 'wxsearch') {
     const q = ($('#wxq').value || '').trim(); UI.wxQ = q; UI.wxPlaces = null; UI.wxBad = false; if (!q) return;
     UI.wxMsg = t('loading'); rerender();

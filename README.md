@@ -11,12 +11,15 @@ of een regel van je coach (tik op "Waarom deze cijfers?").
 ## Zo gebruik je de app
 1. **Intervals.icu koppelen:** Intervals.icu → Settings → Developer Settings → kopieer je **API key**, plak hem in DynamFuel
    (Instellingen) en tik op **Verbinding testen**. Gebruik je DynamCore al op deze telefoon, dan kan DynamFuel die koppeling één keer overnemen.
-2. **Voorraad:** duid aan welke gels, repen, drank en gewoon eten je in huis hebt en hoeveel. Een eigen product voeg je toe met de
-   **streepjescode** (typen of scannen) – kijk de waarden altijd na op het etiket.
+2. **Voorraad:** duid aan welke gels, repen, drank en gewoon eten je in huis hebt en hoeveel. Tik bovenaan op een soort (bv. **Gels**)
+   en op **Op voorraad** om snel te vinden wat je zoekt; je favorieten (★) staan eerst. Tik op een aantal om het meteen te
+   overschrijven. Een eigen product voeg je toe met de **streepjescode** (typen of scannen) – kijk de waarden altijd na op het etiket.
 3. **Ritten:** open een geplande rit. Vul binnen/buiten en de starttijd aan. Je krijgt per uur koolhydraten, vocht en natrium,
    je **paklijst** (kies: alleen drank, drank + gels, of zonder sportdrank), de **tijden** om te eten en wat je vóór en na eet.
 4. **Weer:** stel bij Instellingen je gemeente in; voor buitenritten in de komende 16 dagen gebruikt de app de voorspelde temperatuur.
-5. **Mee op de fiets:** deel je plan als **afbeelding** of print een **sticker** voor je bovenbuis.
+   In de lijst zie je bij elke rit of er nog vragen open staan ("Nog 2 vragen"). Bij "Wanneer" staat één lijn voor het drinken
+   en daaronder alleen de momenten waarop je eet.
+5. **Mee op de fiets:** deel je plan als **afbeelding** of print een **sticker** voor je bovenbuis (de knoppen staan bovenaan elke rit).
 6. **In Intervals.icu (optioneel):** zet bij Instellingen "Brandstofplan in Intervals.icu kunnen zetten" aan; dan zet een knop je plan
    onderaan de beschrijving van de training. De tekst van je coach blijft; alleen het DynamFuel-blok wordt vervangen of verwijderd.
 
@@ -42,9 +45,11 @@ from Intervals.icu, chooses from what you have at home and follows scientific gu
 
 - **Install:** iPhone – Safari → Share → "Add to Home Screen". Android – browser menu → "Install app".
 - **Connect Intervals.icu:** Settings → Developer Settings → copy your API key, paste it in DynamFuel, tap "Test connection".
-- **Stock:** mark what you have; add your own products with the barcode (type or scan) and check the label.
+- **Stock:** mark what you have; tap a kind (e.g. **Gels**) and **In stock** to find things fast, favourites (★) first; tap a
+  number to overwrite it. Add your own products with the barcode (type or scan) and check the label.
 - **Rides:** carbohydrate, fluid and sodium per hour, your pack list (drink only / drink + gels / without sports drink), eating times,
-  before and after. Share it as an image or print a top-tube sticker. Optionally put the plan in the Intervals.icu workout.
+  before and after; one drink line and only the moments you eat. Share it as an image or print a top-tube sticker (buttons
+  at the top of each ride); the list shows which rides still have open questions. Optionally put the plan in the Intervals.icu workout.
 - **Privacy:** no account, no ads, no tracking; everything stays on your phone; the app only talks to Intervals.icu (your key),
   Open-Meteo (your town) and Open Food Facts (a barcode). Monthly back-up reminder.
 - **Important:** general guidelines, not medical advice. Diabetes, a gut disorder, pregnancy, an eating disorder (now or before)
